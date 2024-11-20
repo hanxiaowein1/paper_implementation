@@ -168,9 +168,9 @@ Eigen::Vector3d get_vertex_by_edge(
         // vertex 3 7
         vertex = get_vertex(coors, signed_distance, true, false, false, Vertex::v3, Vertex::v7);
         break;
-    case Edge::ec:
-        // center interpolated point
-        vertex = get_vertex(coors, signed_distance);
+    //case Edge::ec:
+    //    // center interpolated point
+    //    vertex = get_vertex(coors, signed_distance);
     default:
         throw std::invalid_argument("invalid edge!");
         // break;

@@ -1,6 +1,7 @@
 #ifndef __FEATURE_POINT_MC33_TABLES_H__
 #define __FEATURE_POINT_MC33_TABLES_H__
 
+#include <vector>
 #include <unordered_map>
 #include <bitset>
 #include <unordered_set>
@@ -8,6 +9,8 @@
 #include <functional>
 
 #include <boost/functional/hash.hpp>
+#include <Eigen/Dense>
+
 #include "charles_mc33_type.h"
 
 class FeatureMC33Table
@@ -21,16 +24,38 @@ public:
     std::vector<unsigned short> mc33_triangles;
     // example: {0x038}, represents normal triangles
     std::vector<unsigned short> common_triangles;
+    /**
+     * @brief feature point constrains
+     * this is mesh(composed by vertex of cube, can be saw as triangles, use with cube coors(can be saw as vertices))
+     * 
+     * for example:
+     * {
+     *     {
+     *         0,  // this is feature point index
+     *         {
+     *             {1, 2, 3},  // this is mesh triangle(composed by vertex of cube)
+     *             {1, 2, 6},
+     *             {2, 3, 6},
+     *             {Vertex::vc, 3, 6},  // Vertex::vc is the center point of cube
+     *             {Vertex::vc, 1, 6},
+     *             {Vertex::vc, 1, 3},
+     *         }
+     *     }
+     * }
+     */
+    std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>> constrains;
     static int feature_triangle_length;
     static int mc33_triangle_length;
     static int common_triangle_length;
 
     FeatureMC33Table rotate(const Axis& axis, int times = 1);
 
+    std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>> constrains_rotate(const Axis& axis, int times = 1);
+
     friend auto operator<<(std::ostream& os, FeatureMC33Table const& m) -> std::ostream&
     {
         // return os << std::format("x = {}, y = {}, z = {}, flag = {}", m.x, m.y, m.z, m.flag);
-        os << "feature point: {";
+        os << "feature points: {";
         for(const auto& [key, value]: m.feature_points)
         {
             os << std::format(", length: {}, feature point {:#x} ", key, value);
@@ -55,6 +80,16 @@ public:
         {
             os << std::format("{:#x}, ", common_triangle);
         }
+        os << "}, constrains: {";
+        for(const auto& [feature_point_index, triangles]: m.constrains)
+        {
+            os << feature_point_index << "{";
+            for(const auto& triangle: triangles)
+            {
+                os << "{" << triangle[0] << ", " << triangle[1] << ", " << triangle[2] << "}, ";
+            }
+            os << "}";
+        }
         os << "}";
         return os;
     }
@@ -76,6 +111,8 @@ public:
     //     }
     // }
 };
+
+std::ostream& operator<<(std::ostream& stream, const std::unordered_set<std::unordered_set<Vertex>, boost::hash<std::unordered_set<Vertex>>>& object);
 
 extern std::unordered_map<
     // distance signs

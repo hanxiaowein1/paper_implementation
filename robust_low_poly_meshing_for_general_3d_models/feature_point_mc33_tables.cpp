@@ -55,7 +55,6 @@ std::unordered_map<std::unordered_set<Vertex>, Edge, boost::hash<std::unordered_
     {{Vertex::v1, Vertex::v5}, Edge::e9},
     {{Vertex::v2, Vertex::v6}, Edge::e10},
     {{Vertex::v3, Vertex::v7}, Edge::e11},
-    {{Vertex::vc1, Vertex::vc2}, Edge::ec},
 };
 
 std::unordered_map<Edge, std::unordered_set<Vertex>> EDGE_VERTEX = {
@@ -71,7 +70,6 @@ std::unordered_map<Edge, std::unordered_set<Vertex>> EDGE_VERTEX = {
     {Edge::e9, {Vertex::v1, Vertex::v5}},
     {Edge::e10, {Vertex::v2, Vertex::v6}},
     {Edge::e11, {Vertex::v3, Vertex::v7}},
-    {Edge::ec, {Vertex::vc1, Vertex::vc2}},
 };
 
 std::unordered_map<std::unordered_set<Vertex>, unsigned short, boost::hash<std::unordered_set<Vertex>>> NEIGHBOR_DISTANCE = {
@@ -204,8 +202,7 @@ std::unordered_map<Vertex, Vertex> VERTEX_X_ROTATE = {
     {Vertex::v5, Vertex::v4},
     {Vertex::v6, Vertex::v5},
     {Vertex::v7, Vertex::v6},
-    {Vertex::vc1, Vertex::vc1},
-    {Vertex::vc2, Vertex::vc2},
+    {Vertex::vc, Vertex::vc},
 };
 
 // clock wise
@@ -218,8 +215,7 @@ std::unordered_map<Vertex, Vertex> VERTEX_Y_ROTATE = {
     {Vertex::v5, Vertex::v6},
     {Vertex::v6, Vertex::v2},
     {Vertex::v7, Vertex::v3},
-    {Vertex::vc1, Vertex::vc1},
-    {Vertex::vc2, Vertex::vc2},
+    {Vertex::vc, Vertex::vc},
 };
 
 // clock wise
@@ -232,8 +228,7 @@ std::unordered_map<Vertex, Vertex> VERTEX_Z_ROTATE = {
     {Vertex::v5, Vertex::v4},
     {Vertex::v6, Vertex::v7},
     {Vertex::v7, Vertex::v3},
-    {Vertex::vc1, Vertex::vc1},
-    {Vertex::vc2, Vertex::vc2},
+    {Vertex::vc, Vertex::vc},
 };
 
 
@@ -688,6 +683,25 @@ void print_mc33_table()
     }
 }
 
+std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>> FeatureMC33Table::constrains_rotate(const Axis& axis, int times)
+{
+    std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>> ret;
+    for(const auto[feature_point_index, triangles]: this->constrains)
+    {
+        std::vector<Eigen::Vector3i> rotated_triangles;
+        for(const auto& triangle: triangles)
+        {
+            Eigen::Vector3i rotated_triangle;
+            rotated_triangle[0] = static_cast<int>(::rotate_vertex_in_axis(static_cast<Vertex>(triangle[0]), axis, times));
+            rotated_triangle[1] = static_cast<int>(::rotate_vertex_in_axis(static_cast<Vertex>(triangle[1]), axis, times));
+            rotated_triangle[2] = static_cast<int>(::rotate_vertex_in_axis(static_cast<Vertex>(triangle[2]), axis, times));
+            rotated_triangles.emplace_back(std::move(rotated_triangle));
+        }
+        ret.emplace(std::make_pair(feature_point_index, std::move(rotated_triangles)));
+    }
+    return ret;
+}
+
 FeatureMC33Table FeatureMC33Table::rotate(const Axis& axis, int times)
 {
     FeatureMC33Table feature_mc33_tables;
@@ -707,8 +721,54 @@ FeatureMC33Table FeatureMC33Table::rotate(const Axis& axis, int times)
     feature_mc33_tables.mc33_triangles.insert(feature_mc33_tables.mc33_triangles.end(), new_mc33_triangles.begin(), new_mc33_triangles.end());
     auto new_common_triangles = ::rotate_edge_in_axis(this->common_triangles, axis, times, 3);
     feature_mc33_tables.common_triangles = new_common_triangles;
+    feature_mc33_tables.constrains = this->constrains_rotate(axis, times);
     return feature_mc33_tables;
 }
+
+std::unordered_map<Face, std::vector<Eigen::Vector3i>> FACE_TRIANGLES = {
+    {
+        Face::f0,
+        {
+            {0, 1, 5},
+            {0, 4, 5},
+        }
+    },
+    {
+        Face::f1,
+        {
+            {1, 2, 6},
+            {1, 5, 6},
+        }
+    },
+    {
+        Face::f2,
+        {
+            {2, 3, 6},
+            {3, 6, 7}
+        }
+    },
+    {
+        Face::f3,
+        {
+            {0, 3, 7},
+            {0, 7, 4}
+        }
+    },
+    {
+        Face::f4,
+        {
+            {1, 2, 3},
+            {0, 1, 3}
+        }
+    },
+    {
+        Face::f5,
+        {
+            {5, 6, 7},
+            {4, 5, 7}
+        }
+    }
+};
 
 /**
  * @brief first level deside big case, second level deside divided case
@@ -736,7 +796,7 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    {}, {}, {}, {}
+                    {}, {}, {}, {}, {}
                 }
             }
         }
@@ -763,6 +823,8 @@ std::unordered_map<
                     {},
                     // common triangles
                     {},
+                    // feature point constrains
+                    {},
                 }
             }
         }
@@ -788,6 +850,8 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {},
                     // common triangles(std::vector<unsigned short>)
+                    {},
+                    // feature point constrains
                     {},
                 }
             }
@@ -817,6 +881,35 @@ std::unordered_map<
                     {},
                     // common triangles
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {4, 5, 7},
+                                {0, 1, 3},
+                                {0, 4, 1},
+                                {1, 4, 5},
+                                {0, 3, 7},
+                                {0, 4, 7},
+                                {1, 3, 7},
+                                {1, 7, 5},
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {5, 6, 7},
+                                {1, 2, 3},
+                                {2, 3, 6},
+                                {3, 6, 7},
+                                {1, 2, 6},
+                                {1, 6, 5},
+                                {1, 3, 7},
+                                {1, 7, 5},
+                            }
+                        }
+                    },
                 }
             },
             // case 3.2
@@ -834,6 +927,8 @@ std::unordered_map<
                     // mc33 triangles
                     {},
                     // common triangles
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             }
@@ -863,6 +958,35 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            1,
+                            {
+                                {4, 5, 7},
+                                {0, 1, 3},
+                                {0, 4, 1},
+                                {1, 4, 5},
+                                {0, 3, 7},
+                                {0, 4, 7},
+                                {1, 3, 7},
+                                {1, 7, 5},
+                            }
+                        },
+                        {
+                            0,
+                            {
+                                {5, 6, 7},
+                                {1, 2, 3},
+                                {2, 3, 6},
+                                {3, 6, 7},
+                                {1, 2, 6},
+                                {1, 6, 5},
+                                {1, 3, 7},
+                                {1, 7, 5},
+                            }
+                        }
+                    },
                 }
             },
             // case 4.1.2
@@ -879,6 +1003,8 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {0x27A, 0xA74, 0xA41, 0x184, 0x218, 0x278},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             },
         }
@@ -904,6 +1030,8 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {},
                     // common triangles(std::vector<unsigned short>)
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             }
@@ -933,6 +1061,35 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {0, 4, 7},
+                                {1, 5, 6},
+                                {5, 6, 7},
+                                {4, 5, 7},
+                                {1, 0, 4},
+                                {1, 5, 4},
+                                {1, 0, 6},
+                                {0, 6, 7},
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {1, 2, 6},
+                                {0, 3, 7},
+                                {2, 6, 7},
+                                {2, 3, 7},
+                                {1, 0, 2},
+                                {0, 2, 3},
+                                {1, 0, 6},
+                                {0, 6, 7},
+                            }
+                        }
+                    },
                 }
             },
             // case 6.1.2
@@ -949,6 +1106,8 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {0x5A9, 0xA91, 0x189, 0x128, 0x278, 0x2A7, 0xA75},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             },
             // case 6.2
@@ -966,6 +1125,8 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {},
                     // common triangles(std::vector<unsigned short>)
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -996,6 +1157,42 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {2, 3, 6},
+                                {1, 2, 6},
+                                {0, 1, 2},
+                                {0, 2, 3},
+                                {0, 3, 6},
+                                {0, 1, 6},
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {3, 6, 7},
+                                {4, 6, 7},
+                                {0, 3, 7},
+                                {0, 4, 7},
+                                {0, 3, 6},
+                                {0, 4, 6},
+                            }
+                        },
+                        {
+                            2,
+                            {
+                                {4, 5, 6},
+                                {1, 5, 6},
+                                {0, 1, 4},
+                                {1, 4, 5},
+                                {0, 6, 4},
+                                {0, 6, 1},
+                            }
+                        }
+                    },
                 }
             },
             // case 7.2
@@ -1015,6 +1212,33 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {4, 7, 6},
+                                {1, 2, 6},
+                                {1, 0, 4},
+                                {0, 3, 7},
+                                {0, 7, 4},
+                                {0, 1, 2},
+                                {0, 2, 3},
+                                {2, 3, 6},
+                                {3, 6, 7},
+                                {1, 4, 6},
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {4, 5, 6},
+                                {1, 5, 6},
+                                {1, 4, 5},
+                                {1, 4, 6},
+                            }
+                        },
+                    },
                 }
             },
             // case 7.3
@@ -1030,6 +1254,8 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {0x78, 0x28, 0x21, 0x19, 0x49, 0x45, 0xA5, 0x6A, 0x67},
                     // common triangles(std::vector<unsigned short>)
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1050,6 +1276,33 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {2, 7, 6},
+                                {5, 6, 7},
+                                {2, 6, 5},
+                                {2, 5, 7},
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {2, 3, 7},
+                                {4, 5, 7},
+                                {1, 2, 5},
+                                {0, 3, 7},
+                                {0, 4, 7},
+                                {0, 1, 3},
+                                {1, 2, 3},
+                                {0, 1, 4},
+                                {1, 4, 5},
+                                {2, 5, 7},
+                            }
+                        },
+                    },
                 }
             },
             // case 7.4.2
@@ -1066,6 +1319,8 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {0x67B, 0x675, 0x574, 0x459, 0x591, 0x51A, 0x12A, 0x26A, 0x2B6},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             },
         }
@@ -1092,6 +1347,8 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             }
         }
@@ -1117,6 +1374,8 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {},
                     // common triangles(std::vector<unsigned short>)
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             }
@@ -1146,6 +1405,31 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {3, 6, 7},
+                                {0, 5, 4},
+                                FACE_TRIANGLES[Face::f3][0],
+                                FACE_TRIANGLES[Face::f3][1],
+                                FACE_TRIANGLES[Face::f5][0],
+                                FACE_TRIANGLES[Face::f5][1],
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {2, 3, 6},
+                                {0, 1, 5},
+                                FACE_TRIANGLES[Face::f1][0],
+                                FACE_TRIANGLES[Face::f1][1],
+                                FACE_TRIANGLES[Face::f4][0],
+                                FACE_TRIANGLES[Face::f4][1],
+                            }
+                        }
+                    },
                 }
             },
             // 10.1.2
@@ -1162,9 +1446,11 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {0xB6A, 0x2BA, 0x2B0, 0xB80, 0x084, 0x490, 0x6A4, 0x49A},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             },
-            // 10.1.2
+            // 10.2
             {
                 // connected vertices(unordered_set<std::unordered_set<Vertex>>)
                 {{Vertex::v0, Vertex::v5}, {Vertex::v1, Vertex::v4}, {Vertex::v2, Vertex::v4}, {Vertex::v1, Vertex::v7}},
@@ -1175,9 +1461,11 @@ std::unordered_map<
                     // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
                     {},
                     // mc33 triangles(std::vector<unsigned short>)
-                    {},
+                    {0x2A, 0xA9, 0x49, 0x46, 0x6B, 0xB8, 0x08},
                     // common triangles(std::vector<unsigned short>)
-                    {0xC2A, 0xCA9, 0xC49, 0xC46, 0xC6B, 0xCB8, 0xC08},
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             }
         }
@@ -1203,6 +1491,8 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {},
                     // common triangles(std::vector<unsigned short>)
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             }
@@ -1232,6 +1522,33 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {3, 6, 7},
+                                {4, 6, 7},
+                                {3, 4, 7},
+                                {3, 4, 6}
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {2, 3, 6},
+                                {4, 5, 6},
+                                {0, 3, 4},
+                                FACE_TRIANGLES[Face::f1][0],
+                                FACE_TRIANGLES[Face::f1][1],
+                                FACE_TRIANGLES[Face::f2][0],
+                                FACE_TRIANGLES[Face::f2][1],
+                                FACE_TRIANGLES[Face::f4][0],
+                                FACE_TRIANGLES[Face::f4][1],
+                                {3, 4, 6}
+                            }
+                        }
+                    },
                 }
             },
             // 12.1.2
@@ -1247,7 +1564,9 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {},
                     // common triangles(std::vector<unsigned short>)
-                    {0xC15, 0xC13, 0xC38, 0xC48, 0xC47, 0xCB7, 0xCB6, 0xC65},
+                    {0x3B8, 0xB78, 0x487, 0x476, 0x465, 0x561, 0xB61, 0xB13},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             },
             // 12.2
@@ -1264,6 +1583,8 @@ std::unordered_map<
                     {0x15, 0x13, 0x38, 0x48, 0x47, 0xB7, 0xB6, 0x65},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             },
             // 12.3
@@ -1279,6 +1600,8 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {0x84, 0x45, 0x51, 0x13, 0x3B, 0xB6, 0x67, 0x78},
                     // common triangles(std::vector<unsigned short>)
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1310,6 +1633,53 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {0, 2, 3},
+                                {0, 3, 7},
+                                {2, 3, 7},
+                                {static_cast<int>(Vertex::vc), 2, 7},
+                                {static_cast<int>(Vertex::vc), 0, 7},
+                                {static_cast<int>(Vertex::vc), 0, 2},
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {2, 6, 7},
+                                {2, 6, 5},
+                                {5, 6, 7},
+                                {static_cast<int>(Vertex::vc), 2, 7},
+                                {static_cast<int>(Vertex::vc), 7, 5},
+                                {static_cast<int>(Vertex::vc), 5, 2},
+                            }
+                        },
+                        {
+                            2,
+                            {
+                                {0, 4, 7},
+                                {0, 4, 5},
+                                {5, 4, 7},
+                                {static_cast<int>(Vertex::vc), 0, 5},
+                                {static_cast<int>(Vertex::vc), 5, 7},
+                                {static_cast<int>(Vertex::vc), 0, 7},
+                            }
+                        },
+                        {
+                            3,
+                            {
+                                {0, 1, 2},
+                                {5, 1, 2},
+                                {0, 1, 5},
+                                {static_cast<int>(Vertex::vc), 0, 2},
+                                {static_cast<int>(Vertex::vc), 2, 5},
+                                {static_cast<int>(Vertex::vc), 0, 5},
+                            }
+                        }
+                    },
                 }
             },
             // case 13.2
@@ -1330,6 +1700,40 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            1,
+                            {
+                                {0, 4, 7},
+                                {0, 4, 5},
+                                {4, 5, 7},
+                                {0, 7, 5},
+                            }
+                        },
+                        {
+                            2,
+                            {
+                                {0, 1, 2},
+                                {5, 1, 2},
+                                {0, 1, 5},
+                                {0, 2, 5},
+                            }
+                        },
+                        {
+                            0,
+                            {
+                                {5, 6, 7},
+                                {2, 6, 5},
+                                {0, 3, 7},
+                                {0, 2, 3},
+                                FACE_TRIANGLES[Face::f2][0],
+                                FACE_TRIANGLES[Face::f2][1],
+                                {0, 7, 5},
+                                {0, 2, 5},
+                            }
+                        }
+                    },
                 }
             },
             // case 13.3
@@ -1348,6 +1752,18 @@ std::unordered_map<
                     {0xA5, 0x2A, 0x23, 0x38, 0x48, 0x47, 0x7B, 0xB6, 0x65},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {2, 1, 5},
+                                {2, 1, 0},
+                                {0, 1, 5},
+                                {2, 0, 5},
+                            }
+                        }
+                    },
                 }
             },
             // case 13.4
@@ -1363,6 +1779,8 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {0x03, 0x38, 0x84, 0x74, 0x7B, 0xB6, 0x65, 0x5A, 0xA2, 0x21, 0x19, 0x90},
                     // common triangles(std::vector<unsigned short>)
+                    {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1384,6 +1802,42 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {1, 2, 3},
+                                {1, 2, 6},
+                                {6, 2, 3},
+                                {1, 3, 6},
+                            }
+                        },
+                        {
+                            1,
+                            {
+                                {0, 4, 7},
+                                {0, 4, 5},
+                                {5, 4, 7},
+                                {0, 7, 5},
+                            }
+                        },
+                        {
+                            2,
+                            {
+                                {
+                                    {0, 7, 3},
+                                    {0, 3, 1},
+                                    {0, 1, 5},
+                                    {1, 5, 6},
+                                    {5, 6, 7},
+                                    {3, 6, 7},
+                                    {0, 7, 5},
+                                    {1, 3, 6},
+                                }
+                            }
+                        }
+                    },
                 }
             },
             // case 13.5.2
@@ -1402,6 +1856,18 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {0x480, 0x803, 0x378, 0x37B, 0x7B6, 0x674, 0x645, 0x459, 0x049},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {
+                        {
+                            0,
+                            {
+                                {1, 2, 3},
+                                {1, 2, 6},
+                                {6, 2, 3},
+                                {1, 3, 6},
+                            }
+                        },
+                    },
                 }
             }
         }
@@ -1428,11 +1894,26 @@ std::unordered_map<
                     {},
                     // common triangles(std::vector<unsigned short>)
                     {},
+                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    {},
                 }
             }
         }
     },
 };
+
+std::ostream& operator<<(std::ostream& stream, const std::unordered_set<std::unordered_set<Vertex>, boost::hash<std::unordered_set<Vertex>>>& object)
+{
+    for(const auto& connected_vertice: object)
+    {
+        for(const auto& connected_vertex: connected_vertice)
+        {
+            stream << static_cast<int>(connected_vertex) << ",";
+        }
+        stream << std::endl;
+    }
+    return stream;
+}
 
 TEST(GlobalTest, init_tables)
 {
@@ -1597,5 +2078,16 @@ TEST(GlobalTest, has_value_bigger_than_zero_in_interval)
         double a = -1.0f, b = 1.0f, c = -1.0f / 8.0f;
         auto result = has_value_bigger_than_zero_in_interval(a, b, c, start, end);
         ASSERT_EQ(result, true);
+    }
+}
+
+TEST(GlobalTest, feature_point_triangle_same_length)
+{
+    for(const auto&[distances_sign, sub_cases]: MC33_TABLES)
+    {
+        for(const auto& [connected_vertices, feature_mc33_table]: sub_cases)
+        {
+            EXPECT_EQ(feature_mc33_table.feature_points.size(), feature_mc33_table.feature_triangles.size()) <<  "distances_sign: " << distances_sign << ", connected_vertices: " << connected_vertices << " feature mc33 table has problem in feature length equality";
+        }
     }
 }
