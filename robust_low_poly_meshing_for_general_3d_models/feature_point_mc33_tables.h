@@ -17,9 +17,9 @@ class FeatureMC33Table
 {
 public:
     // example: {{4, 0x0387}}, represents feature point interpolated by edge {0, 3, 8, 7}, first element represents length, in case of first is zero
-    std::vector<std::tuple<unsigned short, unsigned int>> feature_points;
+    std::vector<std::tuple<unsigned short, unsigned int>> feature_interpolation_rules;
     // example: {{0, {0x38, 0x37}}}, represents feature point index 0 (0x038) + two point on edge, makes a triangle
-    std::unordered_map<unsigned short, std::vector<unsigned short>> feature_triangles;
+    std::unordered_map<unsigned short, std::vector<unsigned short>> fp_connected_edges;
     // with mc33 inserted point triangles, such as{0x38}
     std::vector<unsigned short> mc33_triangles;
     // example: {0x038}, represents normal triangles
@@ -55,13 +55,13 @@ public:
     friend auto operator<<(std::ostream& os, FeatureMC33Table const& m) -> std::ostream&
     {
         // return os << std::format("x = {}, y = {}, z = {}, flag = {}", m.x, m.y, m.z, m.flag);
-        os << "feature points: {";
-        for(const auto& [key, value]: m.feature_points)
+        os << "feature interpolation rules: {";
+        for(const auto& [key, value]: m.feature_interpolation_rules)
         {
             os << std::format(", length: {}, feature point {:#x} ", key, value);
         }
         os << "}, feature triangles: {";
-        for(const auto& [key, value]: m.feature_triangles)
+        for(const auto& [key, value]: m.fp_connected_edges)
         {
             os << std::format("feature index: {}, ", key);
             os << "feature edge: {";
