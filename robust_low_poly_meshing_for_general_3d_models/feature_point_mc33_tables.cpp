@@ -11,6 +11,7 @@
 #include "Eigen/Dense"
 
 #include "charles_mc33_type.h"
+#include "tuple_hash.h"
 
 /*
   Vertices:            Edges:               Faces:
@@ -361,6 +362,8 @@ bool vertex_interpolation_connected(const std::vector<double>& signed_distance, 
     return false;
 }
 
+std::unordered_map<std::tuple<std::bitset<8>, Vertex, Vertex>, bool, hash_tuple> CONNECTED_VERTEX_CACHE;
+
 /**
  * @brief find if there are path between v1 and v2
  * 
@@ -371,15 +374,28 @@ bool vertex_interpolation_connected(const std::vector<double>& signed_distance, 
  */
 bool vertex_connected(const std::bitset<8>& distance_sign, const Vertex &vertex1, const Vertex &vertex2)
 {
-    // TODO: maybe need a cache to avoid duplicate calculation
+    try
+    {
+        auto is_connected = CONNECTED_VERTEX_CACHE.at({distance_sign, vertex1, vertex2});
+        return is_connected;
+    }
+    catch(const std::out_of_range& e)
+    {
+        // do nothing
+    }
+    auto set_cache_lambda = [&](bool is_connected){
+        CONNECTED_VERTEX_CACHE.emplace(std::make_tuple(distance_sign, vertex1, vertex2), is_connected);
+    };
     if(vertex1 == vertex2)
     {
+        set_cache_lambda(true);
         return true;
     }
     auto vertex1_symbol = distance_sign[static_cast<unsigned short>(vertex1)];
     auto vertex2_symbol = distance_sign[static_cast<unsigned short>(vertex2)];
     if(vertex1_symbol != vertex2_symbol)
     {
+        set_cache_lambda(false);
         return false;
     }
     auto vertex_symbol = vertex1_symbol;
@@ -395,10 +411,12 @@ bool vertex_connected(const std::bitset<8>& distance_sign, const Vertex &vertex1
         auto depth = current_vertex.second;
         if (depth >= 4)
         {
+            set_cache_lambda(false);
             return false;
         }
         if (current_vertex.first == vertex2)
         {
+            set_cache_lambda(true);
             return true;
         }
         auto neighboors = VERTEX_NEIGHBOOR.at(current_vertex.first);
@@ -415,6 +433,7 @@ bool vertex_connected(const std::bitset<8>& distance_sign, const Vertex &vertex1
         }
         visited_vertices.emplace(current_vertex.first);
     }
+    set_cache_lambda(false);
     return false;
 }
 

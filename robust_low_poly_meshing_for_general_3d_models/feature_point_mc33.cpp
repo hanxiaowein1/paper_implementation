@@ -4,6 +4,7 @@
 #include <fstream>
 #include <unordered_set>
 #include <bitset>
+#include <chrono>
 
 #define eigen_assert(X) do { if(!(X)) throw std::runtime_error(#X); } while(false);
 #include "Eigen/Dense"
@@ -20,9 +21,13 @@
 #include "unit_test.h"
 #include "charles_mc33_type.h"
 #include "multivariable_extream.h"
+#include "feature_mc33_cache.h"
 
 //#include <boost/stacktrace.hpp>
 
+// interpolation cache
+FeatureMC33Cache<Eigen::Vector3d> FEATURE_MC33_CACHE;
+int cache_hitted_count = 0;
 
 double interpolate_between_four_edges(
     const std::vector<Eigen::Vector3d>& coors,
@@ -118,11 +123,22 @@ Eigen::Vector3d get_vertex(
 }
 
 Eigen::Vector3d get_vertex_by_edge(
+    int z, int y, int x,
     Edge edge,
     const std::vector<Eigen::Vector3d>& coors,
     const std::vector<double>& signed_distance
 )
 {
+    try{
+        auto cache_value = FEATURE_MC33_CACHE.get({z, y, x, edge});
+        std::cout << "cache hitted" << std::endl;
+        cache_hitted_count++;
+        return cache_value;
+    }catch(const std::out_of_range &exception)
+    {
+        // do nothing
+    }
+
     Eigen::Vector3d vertex;
     switch (edge)
     {
@@ -181,6 +197,7 @@ Eigen::Vector3d get_vertex_by_edge(
         throw std::invalid_argument("invalid edge!");
         // break;
     }
+    FEATURE_MC33_CACHE.set({z, y, x, edge}, vertex);
     return vertex;
 }
 
@@ -332,6 +349,7 @@ public:
     }
 
     Eigen::Vector3d get_feature_vertex(
+        int z, int y, int x,
         const std::tuple<unsigned short, unsigned short>& feature_interpolation_rule,
         const std::vector<Eigen::Vector3d>& coors,
         const std::vector<double>& signed_distances,
@@ -345,7 +363,7 @@ public:
         {
             edges = edges >> (i == 0 ? 0 : 4);
             Edge edge = static_cast<Edge>(edges & 0xF);
-            auto vertex = get_vertex_by_edge(edge, coors, signed_distances);
+            auto vertex = get_vertex_by_edge(z, y, x, edge, coors, signed_distances);
             auto normal = get_interpolated_vertex_normal(vertex);
             interpolated_vertices.emplace_back(std::move(vertex));
             normals.emplace_back(normal);
@@ -356,10 +374,19 @@ public:
         vertices.insert(vertices.end(), coors.begin(), coors.end());
         vertices.emplace_back(std::move(center_point));
         auto feature_vertex = get_feature_vertex(interpolated_vertices, normals, vertices, feature_constrain);
+
+        // may be additional test is needed, the result is abnormal, some point seems out of the cube
+        // NOTE: test result: passed, no point outside the cube, maybe my concern is redunant
+        // if(feature_vertex.x() < coors[0].x() || feature_vertex.x() > coors[6].x() || feature_vertex.y() < coors[0].y() || feature_vertex.y() > coors[6].y() || feature_vertex.z() < coors[0].z() || feature_vertex.z() > coors[6].z())
+        // {
+        //     throw std::exception("feature vertex out of cube! please take attention!");
+        // }
+
         return feature_vertex;
     }
 
     std::tuple<std::vector<Eigen::Vector3d>, std::vector<Eigen::Vector3i>> get_feature_mc33_triangles(
+        int z, int y, int x,
         const FeatureMC33Table& feature_mc33_table,
         const std::vector<Eigen::Vector3d>& coors,
         const std::vector<double>& signed_distances
@@ -375,11 +402,11 @@ public:
             auto feature_interpolation_rule = *iter;
             auto index = std::distance(feature_mc33_table.feature_interpolation_rules.begin(), iter);
             auto feature_constrain = feature_mc33_table.constrains.at(index);
-            auto feature_vertice = get_feature_vertex(feature_interpolation_rule, coors, signed_distances, feature_constrain);
+            auto feature_vertice = get_feature_vertex(z, y, x, feature_interpolation_rule, coors, signed_distances, feature_constrain);
             feature_vertices.emplace_back(feature_vertice);
         }
         auto lambda_func = [&](const Edge& edge) -> Eigen::Vector3d {
-            auto vertex = get_vertex_by_edge(edge, coors, signed_distances);
+            auto vertex = get_vertex_by_edge(z, y, x, edge, coors, signed_distances);
             return vertex;
         };
         std::function<Eigen::Vector3d(const Edge&)> func = lambda_func;
@@ -434,9 +461,9 @@ public:
 
     void run()
     {
-        int nx = 10;
-        int ny = 10;
-        int nz = 10;
+        int nx = 5;
+        int ny = 5;
+        int nz = 5;
 
         Eigen::Vector3d m = V.colwise().minCoeff();
         Eigen::Vector3d M = V.colwise().maxCoeff();
@@ -513,13 +540,13 @@ public:
                         std::cerr << "Caught std::out_of_range exception: " << e.what() << std::endl;
                         throw e;
                     }
-                    auto [temp_vertices, temp_triangles] = this->get_feature_mc33_triangles(feature_mc33_table, coors, signed_distance);
-                    for(int i = 0; i < temp_triangles.size(); i++)
+                    auto [temp_vertices, temp_triangles] = this->get_feature_mc33_triangles(k, j, i, feature_mc33_table, coors, signed_distance);
+                    for(int l = 0; l < temp_triangles.size(); l++)
                     {
                         auto current_vertices_size = vertices.size();
-                        temp_triangles[i][0] = temp_triangles[i][0] + current_vertices_size;
-                        temp_triangles[i][1] = temp_triangles[i][1] + current_vertices_size;
-                        temp_triangles[i][2] = temp_triangles[i][2] + current_vertices_size;
+                        temp_triangles[l][0] = temp_triangles[l][0] + current_vertices_size;
+                        temp_triangles[l][1] = temp_triangles[l][1] + current_vertices_size;
+                        temp_triangles[l][2] = temp_triangles[l][2] + current_vertices_size;
                     }
                     vertices.insert(vertices.end(), temp_vertices.begin(), temp_vertices.end());
                     triangles.insert(triangles.end(), temp_triangles.begin(), temp_triangles.end());
@@ -536,5 +563,11 @@ TEST(GlobalTest, bunny)
     init_tables();
     Chaos chaos;
     chaos.init_source_mesh("D:\\Library\\libigl\\build\\_deps\\libigl_tutorial_tata-src\\bunny.off");
+    auto start = std::chrono::high_resolution_clock::now();
     chaos.run();
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+    std::cout << "total cost seconds is " << duration.count() << "s" << std::endl;
+    std::cout << "cache hitted count" << cache_hitted_count << std::endl;
+    std::cout << "cache count" << FEATURE_MC33_CACHE.size() << std::endl;
 }
