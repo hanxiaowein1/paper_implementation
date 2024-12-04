@@ -851,7 +851,7 @@ std::unordered_map<
                     {{3, 0x038}},
                     // feature triangles
                     {
-                        {0, {0x38, 0x03, 0x08}}
+                        {0, {0x38, 0x03, 0x80}}
                     },
                     // mc33 triangles
                     {},
@@ -918,7 +918,7 @@ std::unordered_map<
                     {{3, 0x478}, {3, 0x56A}},
                     // feature triangles
                     {
-                        {0, {0x47, 0x78, 0x84}},
+                        {0, {0x74, 0x87, 0x48}},
                         {1, {0x56, 0x6A, 0xA5}}
                     },
                     // mc33 triangles
@@ -966,7 +966,7 @@ std::unordered_map<
                     {{6, 0x87456A}},
                     // feature triangles
                     {
-                        {0, {0x87, 0x84, 0x45, 0x5A, 0xA6, 0x67}}
+                        {0, {0x87, 0x48, 0x54, 0xA5, 0x6A, 0x76}}
                     },
                     // mc33 triangles
                     {},
@@ -1000,7 +1000,7 @@ std::unordered_map<
                     {{3, 0x12A}, {3, 0x478}},
                     // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
                     {
-                        {0, {0x12, 0x2A, 0xA1}},
+                        {0, {0x21, 0xA2, 0x1A}},
                         {1, {0x48, 0x87, 0x74}}
                     },
                     // mc33 triangles(std::vector<unsigned short>)
@@ -1051,7 +1051,7 @@ std::unordered_map<
                     // mc33 triangles(std::vector<unsigned short>)
                     {},
                     // common triangles(std::vector<unsigned short>)
-                    {0x27A, 0xA74, 0xA41, 0x184, 0x218, 0x278},
+                    {0x27A, 0xA74, 0xA41, 0x148, 0x218, 0x287},
                     // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
                     {},
                 }
@@ -1108,8 +1108,8 @@ std::unordered_map<
                     {{4, 0x8957}, {3, 0x12A}},
                     // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
                     {
-                        {0, {0x89, 0x95, 0x57, 0x78}},
-                        {1, {0x12, 0x2A, 0xA1}}
+                        {0, {0x98, 0x59, 0x75, 0x87}},
+                        {1, {0x21, 0xA2, 0x1A}}
                     },
                     // mc33 triangles(std::vector<unsigned short>)
                     {},
