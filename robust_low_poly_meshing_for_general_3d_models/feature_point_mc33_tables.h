@@ -67,7 +67,7 @@ public:
             os << "feature edge: {";
             for(const auto& feature_edge: value)
             {
-                os << std::format("{}, ", feature_edge);
+                os << std::format("{:#x}, ", feature_edge);
             }
         }
         os << "}, mc33 triangles: {";
@@ -166,5 +166,7 @@ unsigned short handle_edges(const unsigned short& in_edges, const int& edge_num,
     }
     return res_edges;
 }
+
+void print_mc33_table();
 
 #endif

@@ -26,7 +26,7 @@
 //#include <boost/stacktrace.hpp>
 
 // interpolation cache
-FeatureMC33Cache<Eigen::Vector3d> FEATURE_MC33_CACHE;
+FeatureMC33Cache<int> FEATURE_MC33_CACHE;
 int cache_hitted_count = 0;
 
 double interpolate_between_four_edges(
@@ -105,6 +105,7 @@ Eigen::Vector3d get_vertex(
     }
     if(on_y)
     {
+        auto temp = std::abs(coors[static_cast<int>(first_point)].y() - coors[static_cast<int>(second_point)].y());
         vertex[1] = coors[static_cast<int>(first_point)].y() + t * std::abs(coors[static_cast<int>(first_point)].y() - coors[static_cast<int>(second_point)].y());
     }
     else
@@ -123,22 +124,11 @@ Eigen::Vector3d get_vertex(
 }
 
 Eigen::Vector3d get_vertex_by_edge(
-    int z, int y, int x,
     Edge edge,
     const std::vector<Eigen::Vector3d>& coors,
     const std::vector<double>& signed_distance
 )
 {
-    try{
-        auto cache_value = FEATURE_MC33_CACHE.get({z, y, x, edge});
-        std::cout << "cache hitted" << std::endl;
-        cache_hitted_count++;
-        return cache_value;
-    }catch(const std::out_of_range &exception)
-    {
-        // do nothing
-    }
-
     Eigen::Vector3d vertex;
     switch (edge)
     {
@@ -197,7 +187,6 @@ Eigen::Vector3d get_vertex_by_edge(
         throw std::invalid_argument("invalid edge!");
         // break;
     }
-    FEATURE_MC33_CACHE.set({z, y, x, edge}, vertex);
     return vertex;
 }
 
@@ -267,6 +256,11 @@ public:
     Eigen::MatrixXd FN;
     // AABB tree of source mesh
     igl::AABB<Eigen::MatrixXd, 3> tree;
+    // signed distance
+    Eigen::VectorXd mS;
+
+    std::vector<Eigen::Vector3d> m_vertices;
+    std::vector<Eigen::Vector3i> m_triangles;
 
     void init_source_mesh(const std::string& off_path)
     {
@@ -348,6 +342,33 @@ public:
         return feature_vertex;
     }
 
+    int get_vertex_by_edge(
+        int z, int y, int x,
+        Edge edge,
+        const std::vector<Eigen::Vector3d>& coors,
+        const std::vector<double>& signed_distance
+    )
+    {
+        try{
+            auto cache_index = FEATURE_MC33_CACHE.get({z, y, x, edge});
+            cache_hitted_count++;
+            return cache_index;
+        }catch(const std::out_of_range &exception)
+        {
+            // do nothing
+        }
+        Eigen::Vector3d vertex = ::get_vertex_by_edge(edge, coors, signed_distance);
+        if (std::abs(vertex[0]) > 10 || std::abs(vertex[1]) > 10 || std::abs(vertex[2]) > 10)
+        {
+            std::cout << "catch abnormal vertex" << std::endl;
+        }
+        this->m_vertices.emplace_back(vertex);
+        // std::vector<Eigen::Vector3d>::iterator end = std::prev(this->m_vertices.end());
+        FEATURE_MC33_CACHE.set({z, y, x, edge}, this->m_vertices.size() - 1);
+        return this->m_vertices.size() - 1;
+        // return vertex;
+    }
+
     Eigen::Vector3d get_feature_vertex(
         int z, int y, int x,
         const std::tuple<unsigned short, unsigned short>& feature_interpolation_rule,
@@ -363,9 +384,9 @@ public:
         {
             edges = edges >> (i == 0 ? 0 : 4);
             Edge edge = static_cast<Edge>(edges & 0xF);
-            auto vertex = get_vertex_by_edge(z, y, x, edge, coors, signed_distances);
-            auto normal = get_interpolated_vertex_normal(vertex);
-            interpolated_vertices.emplace_back(std::move(vertex));
+            auto vertex_index = this->get_vertex_by_edge(z, y, x, edge, coors, signed_distances);
+            auto normal = get_interpolated_vertex_normal(this->m_vertices[vertex_index]);
+            interpolated_vertices.emplace_back(this->m_vertices[vertex_index]);
             normals.emplace_back(normal);
         }
         // get feature point from normals and interpolated vertices
@@ -385,16 +406,18 @@ public:
         return feature_vertex;
     }
 
-    std::tuple<std::vector<Eigen::Vector3d>, std::vector<Eigen::Vector3i>> get_feature_mc33_triangles(
+
+    void interpolation_inside_cube(
         int z, int y, int x,
         const FeatureMC33Table& feature_mc33_table,
         const std::vector<Eigen::Vector3d>& coors,
         const std::vector<double>& signed_distances
     )
     {
-        std::vector<Eigen::Vector3d> vertices;
-        std::vector<Eigen::Vector3i> triangles;
-
+        if (z == 1 && y == 0 && x == 1)
+        {
+            std::cout << "catch point" << std::endl;
+        }
         std::vector<Eigen::Vector3d> feature_vertices;
         // for(const auto& feature_interpolation_rule: feature_mc33_table.feature_interpolation_rules)
         for(auto iter = feature_mc33_table.feature_interpolation_rules.begin(); iter != feature_mc33_table.feature_interpolation_rules.end(); iter++)
@@ -402,71 +425,74 @@ public:
             auto feature_interpolation_rule = *iter;
             auto index = std::distance(feature_mc33_table.feature_interpolation_rules.begin(), iter);
             auto feature_constrain = feature_mc33_table.constrains.at(index);
-            auto feature_vertice = get_feature_vertex(z, y, x, feature_interpolation_rule, coors, signed_distances, feature_constrain);
+            auto feature_vertice = this->get_feature_vertex(z, y, x, feature_interpolation_rule, coors, signed_distances, feature_constrain);
             feature_vertices.emplace_back(feature_vertice);
+            if (std::abs(feature_vertice[0]) > 10 || std::abs(feature_vertice[1]) > 10 || std::abs(feature_vertice[2]) > 10)
+            {
+                std::cout << "catch abnormal vertex" << std::endl;
+            }
         }
-        auto lambda_func = [&](const Edge& edge) -> Eigen::Vector3d {
-            auto vertex = get_vertex_by_edge(z, y, x, edge, coors, signed_distances);
-            return vertex;
+        int feature_vertices_start = this->m_vertices.size();
+        this->m_vertices.insert(this->m_vertices.end(), feature_vertices.begin(), feature_vertices.end());
+        auto lambda_func = [&](const Edge& edge) -> int {
+            auto v_index = this->get_vertex_by_edge(z, y, x, edge, coors, signed_distances);
+            return v_index;
         };
-        std::function<Eigen::Vector3d(const Edge&)> func = lambda_func;
+        std::function<int(const Edge&)> func = lambda_func;
         // compute feature triangles
         for(const auto& [feature_index, f_triangles]: feature_mc33_table.fp_connected_edges)
         {
             for(const auto& f_triangle: f_triangles)
             {
-                auto temp_vertices = handle_edges(f_triangle, FeatureMC33Table::feature_triangle_length, func);
-                temp_vertices.emplace_back(feature_vertices[feature_index]);
-                if(temp_vertices.size() != 3)
+                std::vector<int> v_indices = handle_edges(f_triangle, FeatureMC33Table::feature_triangle_length, func);
+                v_indices.emplace_back(feature_vertices_start + feature_index);
+                if(v_indices.size() != 3)
                 {
                     throw std::exception("triangle that contains feature vertex doesn't has three vertice");
                 }
-                int current_vertex_index = vertices.size();
-                triangles.emplace_back(Eigen::Vector3i{current_vertex_index, current_vertex_index + 1, current_vertex_index + 2});
-                vertices.insert(vertices.end(), temp_vertices.begin(), temp_vertices.end());
+                Eigen::Vector3i temp_triangle{ v_indices[0], v_indices[1], v_indices[2] };
+                this->m_triangles.emplace_back(temp_triangle);
             }
         }
 
         // compute with mc33 inserted point triangles
-        // get center interpolated point
-        auto mc33_point = get_vertex(coors, signed_distances);
-        for(const auto& mc33_triangle: feature_mc33_table.mc33_triangles)
+        if (feature_mc33_table.mc33_triangles.size() > 0)
         {
-            // auto lambda_func = [&](const Edge& edge) -> Eigen::Vector3d
-            auto temp_vertices = handle_edges(mc33_triangle, FeatureMC33Table::mc33_triangle_length, func);
-            temp_vertices.emplace_back(mc33_point);
-            if(temp_vertices.size() != 3)
+            // get center interpolated point
+            auto mc33_point = get_vertex(coors, signed_distances);
+            int mc33_point_index = this->m_vertices.size();
+            this->m_vertices.emplace_back(mc33_point);
+            for (const auto& mc33_triangle : feature_mc33_table.mc33_triangles)
             {
-                throw std::exception("triangle that contains mc33 point doesn't has three vertice");
+                // auto lambda_func = [&](const Edge& edge) -> Eigen::Vector3d
+                std::vector<int> v_indices = handle_edges(mc33_triangle, FeatureMC33Table::mc33_triangle_length, func);
+                v_indices.emplace_back(mc33_point_index);
+                if (v_indices.size() != 3)
+                {
+                    throw std::exception("triangle that contains mc33 point doesn't has three vertice");
+                }
+                Eigen::Vector3i temp_triangle{ v_indices[0], v_indices[1], v_indices[2] };
+                this->m_triangles.emplace_back(temp_triangle);
             }
-            int current_vertex_index = vertices.size();
-            triangles.emplace_back(Eigen::Vector3i{current_vertex_index, current_vertex_index + 1, current_vertex_index + 2});
-            vertices.insert(vertices.end(), temp_vertices.begin(), temp_vertices.end());
         }
 
         // compute normal triangles
         for(const auto& common_triangle: feature_mc33_table.common_triangles)
         {
-            auto temp_vertices = handle_edges(common_triangle, FeatureMC33Table::common_triangle_length, func);
-            if(temp_vertices.size() != 3)
+            auto v_indices = handle_edges(common_triangle, FeatureMC33Table::common_triangle_length, func);
+            if(v_indices.size() != 3)
             {
                 throw std::exception("common triangle doesn't has three vertice");
             }
-            int current_vertex_index = vertices.size();
-            triangles.emplace_back(Eigen::Vector3i{current_vertex_index, current_vertex_index + 1, current_vertex_index + 2});
-            vertices.insert(vertices.end(), temp_vertices.begin(), temp_vertices.end());
+            Eigen::Vector3i temp_triangle{ v_indices[0], v_indices[1], v_indices[2] };
+            this->m_triangles.emplace_back(temp_triangle);
         }
-        return {vertices, triangles};
     }
 
-    void run()
+    void init_signed_distances(int nx, int ny, int nz)
     {
-        int nx = 5;
-        int ny = 5;
-        int nz = 5;
-
-        Eigen::Vector3d m = V.colwise().minCoeff();
-        Eigen::Vector3d M = V.colwise().maxCoeff();
+        Eigen::Vector3d m = this->V.colwise().minCoeff();
+        Eigen::Vector3d M = this->V.colwise().maxCoeff();
 
         Eigen::MatrixXd P;
         P.resize(nx * ny * nz, 3);
@@ -489,15 +515,50 @@ public:
 
         Eigen::VectorXi I;
         Eigen::MatrixXd N,C;
-        Eigen::VectorXd S;
         igl::SignedDistanceType type = igl::SIGNED_DISTANCE_TYPE_PSEUDONORMAL;
-        igl::signed_distance(P, V, F, type, S, I, C, N);
+        igl::signed_distance(P, V, F, type, this->mS, I, C, N);
+    }
+
+    std::pair<std::vector<Eigen::Vector3d>, std::vector<double>> cube_coors_and_signed_distances(
+        int ny, int nx,
+        int k, int j, int i
+    )
+    {
+        std::vector<Eigen::Vector3d> coors{
+            {static_cast<double>(i), static_cast<double>(j), static_cast<double>(k)},
+            {static_cast<double>(i), static_cast<double>(j + 1), static_cast<double>(k)},
+            {static_cast<double>(i), static_cast<double>(j + 1), static_cast<double>(k + 1)},
+            {static_cast<double>(i), static_cast<double>(j), static_cast<double>(k + 1)},
+            {static_cast<double>(i + 1), static_cast<double>(j), static_cast<double>(k)},
+            {static_cast<double>(i + 1), static_cast<double>(j + 1), static_cast<double>(k)},
+            {static_cast<double>(i + 1), static_cast<double>(j + 1), static_cast<double>(k + 1)},
+            {static_cast<double>(i + 1), static_cast<double>(j), static_cast<double>(k + 1)},
+        };
+        std::vector<double> signed_distance{
+            this->mS[k * ny * nx + j * nx + i],
+            this->mS[k * ny * nx + (j + 1) * nx + i],
+            this->mS[(k + 1) * ny * nx + (j + 1) * nx + i],
+            this->mS[(k + 1) * ny * nx + j * nx + i],
+            this->mS[k * ny * nx + j * nx + i + 1],
+            this->mS[k * ny * nx + (j + 1) * nx + i + 1],
+            this->mS[(k + 1) * ny * nx + (j + 1) * nx + i + 1],
+            this->mS[(k + 1) * ny * nx + j * nx + i + 1],
+        };
+        return std::make_pair(coors, signed_distance);
+    }
+
+    void run()
+    {
+        int nx = 5;
+        int ny = 5;
+        int nz = 5;
+
+        this->init_signed_distances(nx, ny, nz);
 
         // std::cout << "------------------S---------------------" << std::endl;
         // std::cout << S << std::endl;
 
-        std::vector<Eigen::Vector3d> vertices;
-        std::vector<Eigen::Vector3i> triangles;
+
         int iso_value = 0;
 
         for(int k = 0; k < nz - 1; k++)
@@ -507,28 +568,7 @@ public:
                 for(int i = 0; i < nx - 1; i++)
                 {
                     //  get cube
-                    std::vector<Eigen::Vector3d> coors{
-                        {static_cast<double>(i), static_cast<double>(j), static_cast<double>(k)},
-                        {static_cast<double>(i), static_cast<double>(j + 1), static_cast<double>(k)},
-                        {static_cast<double>(i), static_cast<double>(j + 1), static_cast<double>(k + 1)},
-                        {static_cast<double>(i), static_cast<double>(j), static_cast<double>(k + 1)},
-                        {static_cast<double>(i + 1), static_cast<double>(j), static_cast<double>(k)},
-                        {static_cast<double>(i + 1), static_cast<double>(j + 1), static_cast<double>(k)},
-                        {static_cast<double>(i + 1), static_cast<double>(j + 1), static_cast<double>(k + 1)},
-                        {static_cast<double>(i + 1), static_cast<double>(j), static_cast<double>(k + 1)},
-                    };
-                    unsigned int count = k * ny * nx + j * nx + i;
-                    std::vector<double> signed_distance{
-                        S[k * ny * nx + j * nx + i],
-                        S[k * ny * nx + (j + 1) * nx + i],
-                        S[(k + 1) * ny * nx + (j + 1) * nx + i],
-                        S[(k + 1) * ny * nx + j * nx + i],
-                        S[k * ny * nx + j * nx + i + 1],
-                        S[k * ny * nx + (j + 1) * nx + i + 1],
-                        S[(k + 1) * ny * nx + (j + 1) * nx + i + 1],
-                        S[(k + 1) * ny * nx + j * nx + i + 1],
-                    };
-
+                    const auto [coors, signed_distance] = cube_coors_and_signed_distances(ny, nx, k, j, i);
                     FeatureMC33Table feature_mc33_table;
                     try
                     {
@@ -540,20 +580,11 @@ public:
                         std::cerr << "Caught std::out_of_range exception: " << e.what() << std::endl;
                         throw e;
                     }
-                    auto [temp_vertices, temp_triangles] = this->get_feature_mc33_triangles(k, j, i, feature_mc33_table, coors, signed_distance);
-                    for(int l = 0; l < temp_triangles.size(); l++)
-                    {
-                        auto current_vertices_size = vertices.size();
-                        temp_triangles[l][0] = temp_triangles[l][0] + current_vertices_size;
-                        temp_triangles[l][1] = temp_triangles[l][1] + current_vertices_size;
-                        temp_triangles[l][2] = temp_triangles[l][2] + current_vertices_size;
-                    }
-                    vertices.insert(vertices.end(), temp_vertices.begin(), temp_vertices.end());
-                    triangles.insert(triangles.end(), temp_triangles.begin(), temp_triangles.end());
+                    this->interpolation_inside_cube(k, j, i, feature_mc33_table, coors, signed_distance);
                 }
             }
         }
-        write_obj("./bunny.obj", vertices, triangles);
+        write_obj("./bunny.obj", this->m_vertices, this->m_triangles);
     }
 };
 
@@ -561,6 +592,7 @@ public:
 TEST(GlobalTest, bunny)
 {
     init_tables();
+    print_mc33_table();
     Chaos chaos;
     chaos.init_source_mesh("D:\\Library\\libigl\\build\\_deps\\libigl_tutorial_tata-src\\bunny.off");
     auto start = std::chrono::high_resolution_clock::now();

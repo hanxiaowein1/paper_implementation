@@ -597,6 +597,10 @@ void init_tables()
     > rotated_tables;
     for(auto [distance_signs, sub_cases]: MC33_TABLES)
     {
+        if (distance_signs == 0b11011100)
+        {
+            std::cout << "catch point" << std::endl;
+        }
         // get negative vertex
         auto vertices = get_negative_vertices_from_signed_distance(distance_signs);
         for(auto [connected_verticess, feature_mc33_table]: sub_cases)
@@ -624,6 +628,10 @@ void init_tables()
                         for(const auto& x_rotated_vertice: x_rotated_vertices)
                         {
                             rotated_signed_distance.set(static_cast<int>(x_rotated_vertice), false);
+                        }
+                        if(rotated_signed_distance == 0b10011011)
+                        {
+                            std::cout << "catch point" << std::endl;
                         }
                         if(!rotated_tables.contains(rotated_signed_distance))
                         {
