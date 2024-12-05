@@ -17,13 +17,13 @@ class FeatureMC33Table
 {
 public:
     // example: {{4, 0x0387}}, represents feature point interpolated by edge {0, 3, 8, 7}, first element represents length, in case of first is zero
-    std::vector<std::tuple<unsigned short, unsigned int>> feature_interpolation_rules;
+    std::vector<std::tuple<unsigned int, unsigned int>> feature_interpolation_rules;
     // example: {{0, {0x38, 0x37}}}, represents feature point index 0 (0x038) + two point on edge, makes a triangle
-    std::unordered_map<unsigned short, std::vector<unsigned short>> fp_connected_edges;
+    std::unordered_map<unsigned int, std::vector<unsigned int>> fp_connected_edges;
     // with mc33 inserted point triangles, such as{0x38}
-    std::vector<unsigned short> mc33_triangles;
+    std::vector<unsigned int> mc33_triangles;
     // example: {0x038}, represents normal triangles
-    std::vector<unsigned short> common_triangles;
+    std::vector<unsigned int> common_triangles;
     /**
      * @brief feature point constrains
      * this is mesh(composed by vertex of cube, can be saw as triangles, use with cube coors(can be saw as vertices))
@@ -43,14 +43,42 @@ public:
      *     }
      * }
      */
-    std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>> constrains;
+    std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>> constrains;
     static int feature_triangle_length;
     static int mc33_triangle_length;
     static int common_triangle_length;
 
     FeatureMC33Table rotate(const Axis& axis, int times = 1);
 
-    std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>> constrains_rotate(const Axis& axis, int times = 1);
+    std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>> constrains_rotate(const Axis& axis, int times = 1);
+
+    bool operator==(const FeatureMC33Table& feature_mc33_table) const
+    {
+        if(this->feature_interpolation_rules.size() != feature_mc33_table.feature_interpolation_rules.size())
+        {
+            return false;
+        }
+        for(int i = 0; i < feature_mc33_table.feature_interpolation_rules.size(); i++)
+        {
+            if(this->feature_interpolation_rules[i] != feature_mc33_table.feature_interpolation_rules[i])
+            {
+                return false;
+            }
+        }
+        if(this->fp_connected_edges != feature_mc33_table.fp_connected_edges)
+        {
+            return false;
+        }
+        if(this->mc33_triangles != feature_mc33_table.mc33_triangles)
+        {
+            return false;
+        }
+        if(this->common_triangles != feature_mc33_table.common_triangles)
+        {
+            return false;
+        }
+        return true;
+    }
 
     friend auto operator<<(std::ostream& os, FeatureMC33Table const& m) -> std::ostream&
     {
@@ -138,11 +166,11 @@ void init_tables();
 
 
 template<typename R, typename... Args>
-std::vector<R> handle_edges(const unsigned short& in_edges, const int& edge_num, std::function<R(const Edge&, const Args&...)> callback, const Args&... args)
+std::vector<R> handle_edges(const unsigned int& in_edges, const int& edge_num, std::function<R(const Edge&, const Args&...)> callback, const Args&... args)
 {
     std::vector<R> ret;
-    unsigned short edges = in_edges;
-    for(unsigned short i = 0; i < edge_num; i++)
+    unsigned int edges = in_edges;
+    for(unsigned int i = 0; i < edge_num; i++)
     {
         edges = edges >> (i == 0 ? 0 : 4);
         auto edge = edges & 0xF;
@@ -153,16 +181,16 @@ std::vector<R> handle_edges(const unsigned short& in_edges, const int& edge_num,
 }
 
 template<typename... Args>
-unsigned short handle_edges(const unsigned short& in_edges, const int& edge_num, std::function<Edge(const Edge&, const Args&...)> callback, const Args&... args)
+unsigned int handle_edges(const unsigned int& in_edges, const int& edge_num, std::function<Edge(const Edge&, const Args&...)> callback, const Args&... args)
 {
-    unsigned short res_edges = 0x00000000;
-    unsigned short edges = in_edges;
-    for(unsigned short i = 0; i < edge_num; i++)
+    unsigned int res_edges = 0x00000000;
+    unsigned int edges = in_edges;
+    for(unsigned int i = 0; i < edge_num; i++)
     {
         edges = edges >> (i == 0 ? 0 : 4);
         auto edge = edges & 0xF;
         Edge res_edge = callback(static_cast<Edge>(edge), args...);
-        res_edges = (res_edges | (static_cast<unsigned short>(res_edge) << (4 * i)));
+        res_edges = (res_edges | (static_cast<unsigned int>(res_edge) << (4 * i)));
     }
     return res_edges;
 }

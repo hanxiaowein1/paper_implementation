@@ -73,7 +73,7 @@ std::unordered_map<Edge, std::unordered_set<Vertex>> EDGE_VERTEX = {
     {Edge::e11, {Vertex::v3, Vertex::v7}},
 };
 
-std::unordered_map<std::unordered_set<Vertex>, unsigned short, boost::hash<std::unordered_set<Vertex>>> NEIGHBOR_DISTANCE = {
+std::unordered_map<std::unordered_set<Vertex>, unsigned int, boost::hash<std::unordered_set<Vertex>>> NEIGHBOR_DISTANCE = {
     {{Vertex::v0, Vertex::v1}, 1},
     {{Vertex::v0, Vertex::v2}, 2},
     {{Vertex::v0, Vertex::v3}, 1},
@@ -327,14 +327,14 @@ bool vertex_interpolation_connected(const std::vector<double>& signed_distance, 
         {
             // distance is 3, is diagnal point in cube, just compute the top and bottom interpolation
             auto cube_interpolation = CUBE_INTERPOLATION_MAP.at(std::unordered_set<Vertex>{vertex1, vertex2});
-            double distance_a0 = signed_distance[static_cast<unsigned short>(cube_interpolation["A0"])];
-            double distance_a1 = signed_distance[static_cast<unsigned short>(cube_interpolation["A1"])];
-            double distance_b0 = signed_distance[static_cast<unsigned short>(cube_interpolation["B0"])];
-            double distance_b1 = signed_distance[static_cast<unsigned short>(cube_interpolation["B1"])];
-            double distance_c0 = signed_distance[static_cast<unsigned short>(cube_interpolation["C0"])];
-            double distance_c1 = signed_distance[static_cast<unsigned short>(cube_interpolation["C1"])];
-            double distance_d0 = signed_distance[static_cast<unsigned short>(cube_interpolation["D0"])];
-            double distance_d1 = signed_distance[static_cast<unsigned short>(cube_interpolation["D1"])];
+            double distance_a0 = signed_distance[static_cast<unsigned int>(cube_interpolation["A0"])];
+            double distance_a1 = signed_distance[static_cast<unsigned int>(cube_interpolation["A1"])];
+            double distance_b0 = signed_distance[static_cast<unsigned int>(cube_interpolation["B0"])];
+            double distance_b1 = signed_distance[static_cast<unsigned int>(cube_interpolation["B1"])];
+            double distance_c0 = signed_distance[static_cast<unsigned int>(cube_interpolation["C0"])];
+            double distance_c1 = signed_distance[static_cast<unsigned int>(cube_interpolation["C1"])];
+            double distance_d0 = signed_distance[static_cast<unsigned int>(cube_interpolation["D0"])];
+            double distance_d1 = signed_distance[static_cast<unsigned int>(cube_interpolation["D1"])];
             auto a = (distance_a1 - distance_a0)*(distance_c1 - distance_c0) - (distance_b1 - distance_b0) * (distance_d1 - distance_d0);
             auto b = distance_c0*(distance_a1 - distance_a0) + distance_a0*(distance_c1 - distance_c0) - distance_d0*(distance_b1 - distance_b0) - distance_b0*(distance_d1 - distance_d0);
             auto c = distance_a0*distance_c0 - distance_b0 * distance_d0;
@@ -391,8 +391,8 @@ bool vertex_connected(const std::bitset<8>& distance_sign, const Vertex &vertex1
         set_cache_lambda(true);
         return true;
     }
-    auto vertex1_symbol = distance_sign[static_cast<unsigned short>(vertex1)];
-    auto vertex2_symbol = distance_sign[static_cast<unsigned short>(vertex2)];
+    auto vertex1_symbol = distance_sign[static_cast<unsigned int>(vertex1)];
+    auto vertex2_symbol = distance_sign[static_cast<unsigned int>(vertex2)];
     if(vertex1_symbol != vertex2_symbol)
     {
         set_cache_lambda(false);
@@ -402,7 +402,7 @@ bool vertex_connected(const std::bitset<8>& distance_sign, const Vertex &vertex1
 
     // avoid visited vertex
     std::unordered_set<Vertex> visited_vertices;
-    std::queue<std::pair<Vertex, unsigned short>> visiting_vertices;
+    std::queue<std::pair<Vertex, unsigned int>> visiting_vertices;
     visiting_vertices.push(std::make_pair(vertex1, 0));
     while (!visiting_vertices.empty())
     {
@@ -423,7 +423,7 @@ bool vertex_connected(const std::bitset<8>& distance_sign, const Vertex &vertex1
         for(const auto& neighboor: neighboors)
         {
             // symbol is same
-            if(distance_sign[static_cast<unsigned short>(neighboor)] == vertex_symbol)
+            if(distance_sign[static_cast<unsigned int>(neighboor)] == vertex_symbol)
             {
                 if(!visited_vertices.contains(neighboor))
                 {
@@ -504,48 +504,48 @@ Edge rotate_edge_in_axis(const Edge& edge, const Axis& axis, int times = 1)
     return rotated_edge;
 }
 
-unsigned short handle_edges(const unsigned short& in_edges, const int& edge_num, std::function<Edge(const Edge&)> callback)
+unsigned int handle_edges(const unsigned int& in_edges, const int& edge_num, std::function<Edge(const Edge&)> callback)
 {
-    unsigned short res_edges = 0x00000000;
-    unsigned short edges = in_edges;
-    for(unsigned short i = 0; i < edge_num; i++)
+    unsigned int res_edges = 0x00000000;
+    unsigned int edges = in_edges;
+    for(unsigned int i = 0; i < edge_num; i++)
     {
         edges = edges >> (i == 0 ? 0 : 4);
         auto edge = edges & 0xF;
         Edge res_edge = callback(static_cast<Edge>(edge));
-        res_edges = (res_edges | (static_cast<unsigned short>(res_edge) << (4 * i)));
+        res_edges = (res_edges | (static_cast<unsigned int>(res_edge) << (4 * i)));
     }
     return res_edges;
 }
 
-unsigned short rotate_edge_in_axis(unsigned short edges, const Axis& axis, int times = 1, int edge_num = 3)
+unsigned int rotate_edge_in_axis(unsigned int edges, const Axis& axis, int times = 1, int edge_num = 3)
 {
-    unsigned short rotated_edges = 0x00000000;
-    for(unsigned short i = 0; i < edge_num; i++)
+    unsigned int rotated_edges = 0x00000000;
+    for(unsigned int i = 0; i < edge_num; i++)
     {
         edges = edges >> (i == 0 ? 0 : 4);
         auto edge = edges & 0xF;
         Edge rotated_edge;
         rotated_edge = rotate_edge_in_axis(static_cast<Edge>(edge), axis, times);
-        rotated_edges = (rotated_edges | (static_cast<unsigned short>(rotated_edge) << (4 * i)));
+        rotated_edges = (rotated_edges | (static_cast<unsigned int>(rotated_edge) << (4 * i)));
     }
     return rotated_edges;
 }
 
-std::vector<unsigned short> rotate_edge_in_axis(const std::vector<unsigned short>& edgess, const Axis& axis, int times = 1, int length = 3)
+std::vector<unsigned int> rotate_edge_in_axis(const std::vector<unsigned int>& edgess, const Axis& axis, int times = 1, int length = 3)
 {
-    std::vector<unsigned short> rotated_edgess;
+    std::vector<unsigned int> rotated_edgess;
     for(auto edges: edgess)
     {
-        unsigned short rotated_edges = rotate_edge_in_axis(edges, axis, times, length);
-        // unsigned short rotated_edges = 0x0000;
+        unsigned int rotated_edges = rotate_edge_in_axis(edges, axis, times, length);
+        // unsigned int rotated_edges = 0x0000;
         // for(int i = 0; i < 3; i++)
         // {
         //     edges = edges >> (i == 0 ? 0 : 4);
         //     auto edge = edges & 0xF;
         //     Edge rotated_edge;
         //     rotated_edge = rotate_edge_in_axis(static_cast<Edge>(edge), axis, times);
-        //     rotated_edges = (rotated_edges | (static_cast<unsigned short>(rotated_edge) << (4 * i)));
+        //     rotated_edges = (rotated_edges | (static_cast<unsigned int>(rotated_edge) << (4 * i)));
         // }
         rotated_edgess.emplace_back(rotated_edges);
     }
@@ -597,27 +597,23 @@ void init_tables()
     > rotated_tables;
     for(auto [distance_signs, sub_cases]: MC33_TABLES)
     {
-        if (distance_signs == 0b11011100)
-        {
-            std::cout << "catch point" << std::endl;
-        }
         // get negative vertex
         auto vertices = get_negative_vertices_from_signed_distance(distance_signs);
         for(auto [connected_verticess, feature_mc33_table]: sub_cases)
         {
-            for(unsigned short k = 0; k < 4; k++)
+            for(unsigned int k = 0; k < 4; k++)
             {
                 auto z_rotated_vertices = rotate_vertices_in_axis(vertices, Axis::z, k);
                 // auto z_rotated_edgess = rotate_edge_in_axis(triangles, Axis::z, k);
                 auto z_rotated_table = feature_mc33_table.rotate(Axis::z, k);
                 auto z_rotated_connected_vertices = rotate_vertices_in_axis(connected_verticess, Axis::z, k);
-                for(unsigned short j = 0; j < 4; j++)
+                for(unsigned int j = 0; j < 4; j++)
                 {
                     auto y_rotated_vertices = rotate_vertices_in_axis(z_rotated_vertices, Axis::y, j);
                     // auto y_rotated_edgess = rotate_edge_in_axis(z_rotated_edgess, Axis::y, j);
                     auto y_rotated_table = z_rotated_table.rotate(Axis::y, j);
                     auto y_rotated_connected_vertices = rotate_vertices_in_axis(z_rotated_connected_vertices, Axis::y, j);
-                    for(unsigned short i = 0; i < 4; i++)
+                    for(unsigned int i = 0; i < 4; i++)
                     {
                         auto x_rotated_vertices = rotate_vertices_in_axis(y_rotated_vertices, Axis::x, i);
                         // auto x_rotated_edgess = rotate_edge_in_axis(y_rotated_edgess, Axis::x, i);
@@ -628,10 +624,6 @@ void init_tables()
                         for(const auto& x_rotated_vertice: x_rotated_vertices)
                         {
                             rotated_signed_distance.set(static_cast<int>(x_rotated_vertice), false);
-                        }
-                        if(rotated_signed_distance == 0b10011011)
-                        {
-                            std::cout << "catch point" << std::endl;
                         }
                         if(!rotated_tables.contains(rotated_signed_distance))
                         {
@@ -694,7 +686,7 @@ void print_mc33_table()
                 std::cout << "{";
                 for(const auto& connected_vertex: connected_vertices)
                 {
-                    std::cout << static_cast<unsigned short>(connected_vertex) << " ";
+                    std::cout << static_cast<unsigned int>(connected_vertex) << " ";
                 }
                 std::cout << "},";
             }
@@ -710,9 +702,9 @@ void print_mc33_table()
     }
 }
 
-std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>> FeatureMC33Table::constrains_rotate(const Axis& axis, int times)
+std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>> FeatureMC33Table::constrains_rotate(const Axis& axis, int times)
 {
-    std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>> ret;
+    std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>> ret;
     for(const auto[feature_point_index, triangles]: this->constrains)
     {
         std::vector<Eigen::Vector3i> rotated_triangles;
@@ -735,12 +727,12 @@ FeatureMC33Table FeatureMC33Table::rotate(const Axis& axis, int times)
     for(const auto& feature_point: this->feature_interpolation_rules)
     {
         auto [length, fp] = feature_point;
-        unsigned short new_fp = ::rotate_edge_in_axis(fp, axis, times, length);
+        unsigned int new_fp = ::rotate_edge_in_axis(fp, axis, times, length);
         feature_mc33_tables.feature_interpolation_rules.emplace_back(std::make_tuple(length, new_fp));
     }
     for(auto [index, triangles]: this->fp_connected_edges)
     {
-        auto new_triangles = ::rotate_edge_in_axis(triangles, axis, times);
+        auto new_triangles = ::rotate_edge_in_axis(triangles, axis, times, 2);
         feature_mc33_tables.fp_connected_edges.emplace(index, new_triangles);
     }
     auto new_mc33_triangles = ::rotate_edge_in_axis(this->mc33_triangles, axis, times, 2);
@@ -888,15 +880,15 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{4, 0x3891}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x38, 0x89, 0x91, 0x13}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
                     // feature point constrains
                     {
@@ -933,7 +925,7 @@ std::unordered_map<
                     {},
                     // common triangles
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -980,7 +972,7 @@ std::unordered_map<
                     {},
                     // common triangles
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1004,18 +996,18 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{3, 0x12A}, {3, 0x478}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x21, 0xA2, 0x1A}},
                         {1, {0x48, 0x87, 0x74}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             1,
@@ -1052,15 +1044,15 @@ std::unordered_map<
                 {{Vertex::v2, Vertex::v4}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {0x27A, 0xA74, 0xA41, 0x148, 0x218, 0x287},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1078,17 +1070,17 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{5, 0x13845}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x13, 0x38, 0x84, 0x45, 0x51}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1112,18 +1104,18 @@ std::unordered_map<
                 {{Vertex::v1, Vertex::v6}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{4, 0x8957}, {3, 0x12A}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x98, 0x59, 0x75, 0x87}},
                         {1, {0x21, 0xA2, 0x1A}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1160,15 +1152,15 @@ std::unordered_map<
                 {{Vertex::v1, Vertex::v6}, {Vertex::v2, Vertex::v4}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {0x59A, 0xA91, 0x198, 0x182, 0x287, 0x27A, 0xA75},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1178,17 +1170,17 @@ std::unordered_map<
                 {{Vertex::v2, Vertex::v4}, {Vertex::v2, Vertex::v5}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{5, 0x21987}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x21, 0x19, 0x98, 0x87, 0x72}},
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1212,19 +1204,19 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v6}, {Vertex::v4, Vertex::v6}, {Vertex::v1, Vertex::v6}, {Vertex::v0, Vertex::v6}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{3, 0x12A}, {3, 0x67B}, {3, 0x459}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x21, 0xA2, 0x1A}},
                         {1, {0x67, 0x7B, 0xB6}},
                         {2, {0x45, 0x59, 0x94}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1268,18 +1260,18 @@ std::unordered_map<
                 {{Vertex::v2, Vertex::v7}, {Vertex::v4, Vertex::v6}, {Vertex::v1, Vertex::v6}, {Vertex::v0, Vertex::v6}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{6, 0xB76A12}, {3, 0x459}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0xB7, 0x76, 0x6A, 0xA1, 0x12, 0x2B}},
                         {1, {0x45, 0x59, 0x94}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1314,15 +1306,15 @@ std::unordered_map<
                 {{Vertex::v2, Vertex::v7}, {Vertex::v2, Vertex::v5}, {Vertex::v4, Vertex::v6}, {Vertex::v0, Vertex::v6}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {0x7B, 0xB2, 0x21, 0x19, 0x94, 0x45, 0x5A, 0xA6, 0x67},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1332,18 +1324,18 @@ std::unordered_map<
                 {{Vertex::v2, Vertex::v7}, {Vertex::v2, Vertex::v5}, {Vertex::v5, Vertex::v7}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{3, 0x56A}, {6, 0x2B7491}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x65, 0xA6, 0x5A}},
                         {1, {0xB2, 0x7B, 0x47, 0x94, 0x19, 0x21}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1378,15 +1370,15 @@ std::unordered_map<
                 {{Vertex::v2, Vertex::v7}, {Vertex::v2, Vertex::v5}, {Vertex::v5, Vertex::v7}, {Vertex::v0, Vertex::v6}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {0x67B, 0x657, 0x547, 0x459, 0x519, 0x5A1, 0x1A2, 0x2A6, 0x26B},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1404,17 +1396,17 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{4, 0x1573}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x51, 0x75, 0x37, 0x13}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1437,17 +1429,17 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{6, 0xB74912}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0xB7, 0x74, 0x49, 0x91, 0x12, 0x2B}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1471,18 +1463,18 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v5}, {Vertex::v0, Vertex::v5}, {Vertex::v0, Vertex::v6}, {Vertex::v3, Vertex::v5}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{4, 0xB648}, {4, 0x2A90}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0xB6, 0x64, 0x48, 0x8B}},
                         {1, {0xA2, 0x9A, 0x09, 0x20}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1515,15 +1507,15 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v5}, {Vertex::v0, Vertex::v2}, {Vertex::v2, Vertex::v4}, {Vertex::v1, Vertex::v7}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {0xB6A, 0x2BA, 0x20B, 0xB08, 0x048, 0x409, 0x64A, 0x49A},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1533,15 +1525,15 @@ std::unordered_map<
                 {{Vertex::v0, Vertex::v5}, {Vertex::v1, Vertex::v4}, {Vertex::v2, Vertex::v4}, {Vertex::v1, Vertex::v7}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {0xA2, 0x9A, 0x49, 0x64, 0xB6, 0x8B, 0x08},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             }
@@ -1559,17 +1551,17 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{6, 0x23749A}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x23, 0x37, 0x74, 0x49, 0x9A, 0xA2}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1593,18 +1585,18 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v4}, {Vertex::v4, Vertex::v6}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{3, 0x67B}, {5, 0x13845}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x67, 0x7B, 0xB6}},
                         {1, {0x13, 0x38, 0x84, 0x45, 0x51}},
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1639,15 +1631,15 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v4}, {Vertex::v4, Vertex::v6}, {Vertex::v1, Vertex::v7}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {0x38B, 0xB87, 0x478, 0x467, 0x456, 0x516, 0xB61, 0xB13},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1657,15 +1649,15 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v4}, {Vertex::v5, Vertex::v7}, {Vertex::v1, Vertex::v7}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {0x51, 0x13, 0x38, 0x84, 0x47, 0x7B, 0xB6, 0x65},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1675,15 +1667,15 @@ std::unordered_map<
                 {{Vertex::v4, Vertex::v6}, {Vertex::v2, Vertex::v4}, {Vertex::v0, Vertex::v7}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {0x84, 0x45, 0x51, 0x13, 0x3B, 0xB6, 0x67, 0x78},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1702,20 +1694,20 @@ std::unordered_map<
                 {{Vertex::v2, Vertex::v7}, {Vertex::v0, Vertex::v5}, {Vertex::v0, Vertex::v7}, {Vertex::v2, Vertex::v5}, {Vertex::v5, Vertex::v7}, {Vertex::v0, Vertex::v2}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{3, 0x23B}, {3, 0x56A}, {3, 0x478}, {3, 0x019}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x32, 0xB3, 0x2B}},
                         {1, {0x56, 0x6A, 0xA5}},
                         {2, {0x48, 0x87, 0x74}},
                         {3, {0x10, 0x91, 0x09}},
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1770,19 +1762,19 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v6}, {Vertex::v0, Vertex::v5}, {Vertex::v0, Vertex::v7}, {Vertex::v2, Vertex::v5}, {Vertex::v5, Vertex::v7}, {Vertex::v0, Vertex::v2}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{6, 0x23B65A}, {3, 0x478}, {3, 0x019}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x32, 0xB3, 0x6B, 0x56, 0xA5, 0x2A}},
                         {1, {0x48, 0x87, 0x74}},
                         {2, {0x10, 0x91, 0x09}},
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             1,
@@ -1824,17 +1816,17 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v6}, {Vertex::v0, Vertex::v5}, {Vertex::v3, Vertex::v4}, {Vertex::v2, Vertex::v5}, {Vertex::v5, Vertex::v7}, {Vertex::v0, Vertex::v2}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{3, 0x019}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x10, 0x91, 0x09}},
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {0xA5, 0x2A, 0x32, 0x83, 0x48, 0x74, 0xB7, 0x6B, 0x56},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1854,15 +1846,15 @@ std::unordered_map<
                 {{Vertex::v0, Vertex::v6}, {Vertex::v0, Vertex::v5}, {Vertex::v3, Vertex::v4}, {Vertex::v2, Vertex::v5}, {Vertex::v5, Vertex::v7}, {Vertex::v1, Vertex::v3}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {0x30, 0x83, 0x48, 0x74, 0xB7, 0x6B, 0x56, 0xA5, 0x2A, 0x12, 0x91, 0x09},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {},
                 }
             },
@@ -1872,19 +1864,19 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v6}, {Vertex::v0, Vertex::v5}, {Vertex::v0, Vertex::v7}, {Vertex::v1, Vertex::v6}, {Vertex::v5, Vertex::v7}, {Vertex::v1, Vertex::v3}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{3, 0x12A}, {3, 0x478}, {6, 0x3B6590}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x12, 0x2A, 0xA1}},
                         {1, {0x48, 0x87, 0x74}},
                         {2, {0x3B, 0xB6, 0x65, 0x59, 0x90, 0x03}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1928,17 +1920,17 @@ std::unordered_map<
                 {{Vertex::v3, Vertex::v5}, {Vertex::v1, Vertex::v4}, {Vertex::v0, Vertex::v7}, {Vertex::v1, Vertex::v6}, {Vertex::v5, Vertex::v7}, {Vertex::v1, Vertex::v3}},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{3, 0x12A}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x12, 0x2A, 0xA1}},
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {0x480, 0x830, 0x387, 0x37B, 0x76B, 0x674, 0x645, 0x495, 0x094},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -1966,17 +1958,17 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    // feature interpolation rules(std::vector<std::tuple<unsigned short, unsigned short>>)
+                    // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {{6, 0x2B8451}},
-                    // feature triangles(std::unordered_map<unsigned short, std::vector<unsigned short>>)
+                    // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x2B, 0xB8, 0x84, 0x45, 0x51, 0x12}}
                     },
-                    // mc33 triangles(std::vector<unsigned short>)
+                    // mc33 triangles(std::vector<unsigned int>)
                     {},
-                    // common triangles(std::vector<unsigned short>)
+                    // common triangles(std::vector<unsigned int>)
                     {},
-                    // feature point constrains(std::unordered_map<unsigned short, std::vector<Eigen::Vector3i>>)
+                    // feature point constrains(std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>>)
                     {
                         {
                             0,
@@ -2177,5 +2169,72 @@ TEST(GlobalTest, feature_point_triangle_same_length)
             EXPECT_EQ(feature_mc33_table.feature_interpolation_rules.size(), feature_mc33_table.fp_connected_edges.size()) <<  "distances_sign: " << distances_sign << ", connected_vertices: " << connected_vertices << " feature mc33 table has problem in feature length equality";
             EXPECT_EQ(feature_mc33_table.feature_interpolation_rules.size(), feature_mc33_table.constrains.size()) <<  "distances_sign: " << distances_sign << ", connected_vertices: " << connected_vertices << " feature mc33 table has problem in feature length equality";
         }
+    }
+}
+
+TEST(GlobalTest, rotate_test)
+{
+    auto feature_mc33_table = MC33_TABLES.at(0b11011100).at({});
+    auto vertices = get_negative_vertices_from_signed_distance(0b11011100);
+    {
+        std::vector<Vertex> expect_vertices{ Vertex::v0, Vertex::v1, Vertex::v5 };
+        ASSERT_EQ(vertices, expect_vertices);
+    }
+
+    {
+        auto z_rotated_vertices = rotate_vertices_in_axis(vertices, Axis::z, 1);
+        std::vector<Vertex> expect_z_vertices{ Vertex::v1, Vertex::v5, Vertex::v4 };
+        ASSERT_EQ(z_rotated_vertices, expect_z_vertices);
+
+        auto y_rotated_vertices = rotate_vertices_in_axis(z_rotated_vertices, Axis::y, 2);
+        std::vector<Vertex> expect_y_vertices{ Vertex::v6, Vertex::v2, Vertex::v3 };
+        ASSERT_EQ(y_rotated_vertices, expect_y_vertices);
+
+        auto x_rotated_vertices = rotate_vertices_in_axis(y_rotated_vertices, Axis::x, 3);
+        std::vector<Vertex> expect_x_vertices{ Vertex::v7, Vertex::v3, Vertex::v0 };
+        ASSERT_EQ(x_rotated_vertices, expect_x_vertices);
+    }
+
+    {
+        auto z_rotated_table = feature_mc33_table.rotate(Axis::z, 1);
+        std::tuple<unsigned int, unsigned int> expect_z_feature_rules{5, 0x51087};
+        ASSERT_EQ(z_rotated_table.feature_interpolation_rules[0], expect_z_feature_rules);
+        std::unordered_map<unsigned int, std::vector<unsigned int>> expect_z_feature_triangles{ {0, {0x51, 0x10, 0x08, 0x87, 0x75}} };
+        ASSERT_EQ(z_rotated_table.fp_connected_edges, expect_z_feature_triangles);
+
+    }
+}
+
+TEST(GlobalTest, rotate_test_clever)
+{
+    std::vector<Vertex> vertices{ Vertex::v0, Vertex::v1, Vertex::v2, Vertex::v3 };
+    // rotate on z
+    {
+        auto rotated_vertices = rotate_vertices_in_axis(vertices, Axis::z, 4);
+        ASSERT_EQ(vertices, rotated_vertices);
+    }
+    // rotate on y
+    {
+        auto rotated_vertices = rotate_vertices_in_axis(vertices, Axis::y, 4);
+        ASSERT_EQ(vertices, rotated_vertices);
+    }
+    // rotate on x
+    {
+        auto rotated_vertices = rotate_vertices_in_axis(vertices, Axis::x, 4);
+        ASSERT_EQ(vertices, rotated_vertices);
+    }
+
+    auto feature_mc33_table = MC33_TABLES.at(0b11011100).at({});
+    {
+        auto rotated_table = feature_mc33_table.rotate(Axis::z, 4);
+        ASSERT_EQ(feature_mc33_table, rotated_table);
+    }
+    {
+        auto rotated_table = feature_mc33_table.rotate(Axis::y, 4);
+        ASSERT_EQ(feature_mc33_table, rotated_table);
+    }
+    {
+        auto rotated_table = feature_mc33_table.rotate(Axis::x, 4);
+        ASSERT_EQ(feature_mc33_table, rotated_table);
     }
 }

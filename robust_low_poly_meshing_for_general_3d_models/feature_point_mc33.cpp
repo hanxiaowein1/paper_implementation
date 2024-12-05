@@ -204,12 +204,12 @@ FeatureMC33Table  get_feature_mc33_table(const std::vector<double>& signed_dista
     auto sub_cases = MC33_TABLES.at(distances_signs);
     // get all connected vertices that are not ambiguous
     std::unordered_set<std::unordered_set<Vertex>, boost::hash<std::unordered_set<Vertex>>> connected_verticess;
-    for(unsigned short i = 0; i < 8; i++)
+    for(unsigned int i = 0; i < 8; i++)
     {
-        for(unsigned short j = i + 1; j < 8; j++)
+        for(unsigned int j = i + 1; j < 8; j++)
         {
             Vertex vertex1 = static_cast<Vertex>(i), vertex2 = static_cast<Vertex>(j);
-            if (distances_signs[static_cast<unsigned short>(vertex1)] == distances_signs[static_cast<unsigned short>(vertex2)])
+            if (distances_signs[static_cast<unsigned int>(vertex1)] == distances_signs[static_cast<unsigned int>(vertex2)])
             {
                 if (!vertex_connected(distances_signs, vertex1, vertex2))
                 {
@@ -358,10 +358,6 @@ public:
             // do nothing
         }
         Eigen::Vector3d vertex = ::get_vertex_by_edge(edge, coors, signed_distance);
-        if (std::abs(vertex[0]) > 10 || std::abs(vertex[1]) > 10 || std::abs(vertex[2]) > 10)
-        {
-            std::cout << "catch abnormal vertex" << std::endl;
-        }
         this->m_vertices.emplace_back(vertex);
         // std::vector<Eigen::Vector3d>::iterator end = std::prev(this->m_vertices.end());
         FEATURE_MC33_CACHE.set({z, y, x, edge}, this->m_vertices.size() - 1);
@@ -371,7 +367,7 @@ public:
 
     Eigen::Vector3d get_feature_vertex(
         int z, int y, int x,
-        const std::tuple<unsigned short, unsigned short>& feature_interpolation_rule,
+        const std::tuple<unsigned int, unsigned int>& feature_interpolation_rule,
         const std::vector<Eigen::Vector3d>& coors,
         const std::vector<double>& signed_distances,
         const std::vector<Eigen::Vector3i>& feature_constrain
@@ -414,10 +410,6 @@ public:
         const std::vector<double>& signed_distances
     )
     {
-        if (z == 1 && y == 0 && x == 1)
-        {
-            std::cout << "catch point" << std::endl;
-        }
         std::vector<Eigen::Vector3d> feature_vertices;
         // for(const auto& feature_interpolation_rule: feature_mc33_table.feature_interpolation_rules)
         for(auto iter = feature_mc33_table.feature_interpolation_rules.begin(); iter != feature_mc33_table.feature_interpolation_rules.end(); iter++)
@@ -427,10 +419,6 @@ public:
             auto feature_constrain = feature_mc33_table.constrains.at(index);
             auto feature_vertice = this->get_feature_vertex(z, y, x, feature_interpolation_rule, coors, signed_distances, feature_constrain);
             feature_vertices.emplace_back(feature_vertice);
-            if (std::abs(feature_vertice[0]) > 10 || std::abs(feature_vertice[1]) > 10 || std::abs(feature_vertice[2]) > 10)
-            {
-                std::cout << "catch abnormal vertex" << std::endl;
-            }
         }
         int feature_vertices_start = this->m_vertices.size();
         this->m_vertices.insert(this->m_vertices.end(), feature_vertices.begin(), feature_vertices.end());
