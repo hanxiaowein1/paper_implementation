@@ -8,8 +8,8 @@ std::vector<std::vector<int>> convert_triangles_to_polygons(const std::vector<Ei
     {
         std::vector<int> polygon(3, 0);
         polygon[0] = triangle[0];
-        polygon[1] = triangle[0];
-        polygon[2] = triangle[0];
+        polygon[1] = triangle[1];
+        polygon[2] = triangle[2];
         polygons.emplace_back(std::move(polygon));
     }
     return polygons;

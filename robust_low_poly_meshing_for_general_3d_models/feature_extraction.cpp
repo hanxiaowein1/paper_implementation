@@ -28,6 +28,14 @@ bool feature_point_connected_after_flip(std::shared_ptr<charles_mesh::HalfEdge<C
 {
     auto e2 = half_edge;
     auto e4 = half_edge->opposite;
+    if (e4 == nullptr)
+    {
+        return false;
+    }
+    //if (e2->next == nullptr)
+    //{
+    //    return false;
+    //}
     if(!e2->next->vertex->position.is_feature_point)
     {
         return false;
@@ -60,8 +68,11 @@ void feature_extraction(
     const std::vector<std::vector<int>>& polygons
 )
 {
+    charles_mesh::ObjMeshIO<CustomizedPoint3D> obj_mesh_io;
     // convert to half edge data structure
     std::shared_ptr<charles_mesh::Mesh<CustomizedPoint3D>> mesh(new charles_mesh::Mesh<CustomizedPoint3D>(vertices, polygons));
+    //obj_mesh_io.save_mesh("./", "half_edge_bunny", mesh);
+    mesh->save_obj("./", "half_edge_bunny");
     // edge flip between feature point, and avoid self intersection
     for(auto half_edge: mesh->half_edges)
     {
@@ -72,10 +83,8 @@ void feature_extraction(
         }
     }
     // save it to obj file to check the result(just for test)
-    std::string bunny_obj_src_path = "./bunny.obj";
-    charles_mesh::ObjMeshIO<CustomizedPoint3D> obj_mesh_io;
-    // auto mesh = obj_mesh_io.load_mesh(bunny_obj_src_path);
-    obj_mesh_io.save_mesh("./", "bunny.obj", mesh);
+    //obj_mesh_io.save_mesh("./", "flipped_bunny", mesh);
+    mesh->save_obj("./", "flipped_half_edge_bunny");
 }
 
 

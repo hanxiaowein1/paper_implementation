@@ -609,7 +609,7 @@ public:
                 }
             }
         }
-        // write_obj("./bunny.obj", this->convert(this->m_vertices), this->m_triangles);
+        write_obj("./bunny.obj", this->convert(this->m_vertices), this->m_triangles);
         auto polygons = convert_triangles_to_polygons(this->m_triangles);
         feature_extraction(this->m_vertices, polygons);
     }
