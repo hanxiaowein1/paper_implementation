@@ -21,7 +21,11 @@ find_package(hello_symengine)
 find_package(charles_mesh)
 # find_package(boost_stacktrace REQUIRED CONFIG)
 set(IGL_STATIC_LIBRARY_DIR "D:\\Library\\libigl\\build\\lib\\Debug")
-add_executable(tests unit_test.cpp feature_point_mc33.cpp feature_point_mc33_tables.cpp feature_mc33_cache.cpp)
+add_executable(
+    tests
+    unit_test.cpp feature_point_mc33.cpp feature_point_mc33_tables.cpp feature_mc33_cache.cpp
+    feature_extraction.cpp robust_common.cpp
+)
 target_link_libraries(tests GTest::gtest GTest::gmock)
 target_link_libraries(tests CGAL::CGAL)
 target_link_libraries(tests Boost::functional)

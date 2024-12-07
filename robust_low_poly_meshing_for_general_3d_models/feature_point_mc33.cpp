@@ -22,8 +22,8 @@
 #include "charles_mc33_type.h"
 #include "multivariable_extream.h"
 #include "feature_mc33_cache.h"
-
-//#include <boost/stacktrace.hpp>
+#include "feature_extraction.h"
+#include "robust_common.h"
 
 // interpolation cache
 FeatureMC33Cache<int> FEATURE_MC33_CACHE;
@@ -259,7 +259,7 @@ public:
     // signed distance
     Eigen::VectorXd mS;
 
-    std::vector<Eigen::Vector3d> m_vertices;
+    std::vector<CustomizedPoint3D> m_vertices;
     std::vector<Eigen::Vector3i> m_triangles;
 
     void init_source_mesh(const std::string& off_path)
@@ -267,6 +267,24 @@ public:
         igl::readOFF(off_path, this->V, this->F);
         this->tree.init(this->V, this->F);
         igl::per_face_normals(this->V, this->F, FN);
+    }
+
+    Eigen::Vector3d convert(const CustomizedPoint3D& point)
+    {
+        Eigen::Vector3d vertex;
+        vertex[0] = point.x;
+        vertex[1] = point.y;
+        vertex[2] = point.z;
+        return vertex;
+    }
+
+    CustomizedPoint3D convert(const Eigen::Vector3d& vertex)
+    {
+        CustomizedPoint3D point;
+        point[0] = vertex.x();
+        point[1] = vertex.y();
+        point[2] = vertex.z();
+        return point;
     }
 
     Eigen::Vector3d get_interpolated_vertex_normal(const Eigen::Vector3d& interpolated_vertex)
@@ -358,11 +376,27 @@ public:
             // do nothing
         }
         Eigen::Vector3d vertex = ::get_vertex_by_edge(edge, coors, signed_distance);
-        this->m_vertices.emplace_back(vertex);
+        // this->m_vertices.emplace_back(vertex);
+        this->insert_vertex(vertex);
         // std::vector<Eigen::Vector3d>::iterator end = std::prev(this->m_vertices.end());
         FEATURE_MC33_CACHE.set({z, y, x, edge}, this->m_vertices.size() - 1);
         return this->m_vertices.size() - 1;
         // return vertex;
+    }
+
+    void insert_vertex(const Eigen::Vector3d& vertex)
+    {
+        CustomizedPoint3D cstmzd_vertex = this->convert(vertex);
+
+        this->m_vertices.emplace_back(cstmzd_vertex);
+    }
+
+    void insert_vertex(const std::vector<Eigen::Vector3d>& vertices)
+    {
+        for(const auto& vertex: vertices)
+        {
+            this->insert_vertex(vertex);
+        }
     }
 
     Eigen::Vector3d get_feature_vertex(
@@ -381,8 +415,8 @@ public:
             edges = edges >> (i == 0 ? 0 : 4);
             Edge edge = static_cast<Edge>(edges & 0xF);
             auto vertex_index = this->get_vertex_by_edge(z, y, x, edge, coors, signed_distances);
-            auto normal = get_interpolated_vertex_normal(this->m_vertices[vertex_index]);
-            interpolated_vertices.emplace_back(this->m_vertices[vertex_index]);
+            auto normal = get_interpolated_vertex_normal(this->convert(this->m_vertices[vertex_index]));
+            interpolated_vertices.emplace_back(this->convert(this->m_vertices[vertex_index]));
             normals.emplace_back(normal);
         }
         // get feature point from normals and interpolated vertices
@@ -410,7 +444,7 @@ public:
         const std::vector<double>& signed_distances
     )
     {
-        std::vector<Eigen::Vector3d> feature_vertices;
+        std::vector<CustomizedPoint3D> feature_vertices;
         // for(const auto& feature_interpolation_rule: feature_mc33_table.feature_interpolation_rules)
         for(auto iter = feature_mc33_table.feature_interpolation_rules.begin(); iter != feature_mc33_table.feature_interpolation_rules.end(); iter++)
         {
@@ -418,10 +452,13 @@ public:
             auto index = std::distance(feature_mc33_table.feature_interpolation_rules.begin(), iter);
             auto feature_constrain = feature_mc33_table.constrains.at(index);
             auto feature_vertice = this->get_feature_vertex(z, y, x, feature_interpolation_rule, coors, signed_distances, feature_constrain);
-            feature_vertices.emplace_back(feature_vertice);
+            CustomizedPoint3D temp_point = this->convert(feature_vertice);
+            temp_point.is_feature_point = true;
+            feature_vertices.emplace_back(temp_point);
         }
         int feature_vertices_start = this->m_vertices.size();
         this->m_vertices.insert(this->m_vertices.end(), feature_vertices.begin(), feature_vertices.end());
+        // this->insert_vertex(feature_vertices);
         auto lambda_func = [&](const Edge& edge) -> int {
             auto v_index = this->get_vertex_by_edge(z, y, x, edge, coors, signed_distances);
             return v_index;
@@ -449,7 +486,7 @@ public:
             // get center interpolated point
             auto mc33_point = get_vertex(coors, signed_distances);
             int mc33_point_index = this->m_vertices.size();
-            this->m_vertices.emplace_back(mc33_point);
+            this->m_vertices.emplace_back(this->convert(mc33_point));
             for (const auto& mc33_triangle : feature_mc33_table.mc33_triangles)
             {
                 // auto lambda_func = [&](const Edge& edge) -> Eigen::Vector3d
@@ -572,7 +609,19 @@ public:
                 }
             }
         }
-        write_obj("./bunny.obj", this->m_vertices, this->m_triangles);
+        // write_obj("./bunny.obj", this->convert(this->m_vertices), this->m_triangles);
+        auto polygons = convert_triangles_to_polygons(this->m_triangles);
+        feature_extraction(this->m_vertices, polygons);
+    }
+
+    std::vector<Eigen::Vector3d> convert(const std::vector<CustomizedPoint3D>& cstmzd_points)
+    {
+        std::vector<Eigen::Vector3d> ret;
+        for(const auto& cstmzd_point: cstmzd_points)
+        {
+            ret.emplace_back(this->convert(cstmzd_point));
+        }
+        return ret;
     }
 };
 
