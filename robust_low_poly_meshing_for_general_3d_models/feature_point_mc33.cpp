@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <bitset>
 #include <chrono>
+#include <filesystem>
 
 #define eigen_assert(X) do { if(!(X)) throw std::runtime_error(#X); } while(false);
 #include "Eigen/Dense"
@@ -12,6 +13,7 @@
 #define NOMINMAX
 #endif
 #include "igl/readOFF.h"
+#include "igl/readOBJ.h"
 #include "igl/signed_distance.h"
 #include "igl/AABB.h"
 #include "igl/per_face_normals.h"
@@ -262,9 +264,18 @@ public:
     std::vector<CustomizedPoint3D> m_vertices;
     std::vector<Eigen::Vector3i> m_triangles;
 
-    void init_source_mesh(const std::string& off_path)
+    void init_source_mesh(const std::string& mesh_path)
     {
-        igl::readOFF(off_path, this->V, this->F);
+        std::filesystem::path fs_mesh_path = mesh_path;
+        auto file_extension = fs_mesh_path.extension();
+        if(file_extension == ".off")
+        {
+            igl::readOFF(mesh_path, this->V, this->F);
+        }
+        else if(file_extension == ".obj")
+        {
+            igl::readOBJ(mesh_path, this->V, this->F);
+        }
         this->tree.init(this->V, this->F);
         igl::per_face_normals(this->V, this->F, FN);
     }
@@ -299,15 +310,7 @@ public:
         P(0, 1) = interpolated_vertex[1];
         P(0, 2) = interpolated_vertex[2];
 
-        //for(int i = 0; i < P.rows(); i++)
-        //{
-        //    for(int j = 0; j < P.cols(); j++)
-        //    {
-        //        P(i, j) = interpolated_vertex(i * 2 + j);
-        //    }
-        //}
-        // igl::point_mesh_squared_distance(P,V,F,sqrD,I,C);
-        tree.squared_distance(this->V, this->F, P, sqrD, I, C);
+        this->tree.squared_distance(this->V, this->F, P, sqrD, I, C);
 
         if(sqrD[0] == 0)
         {
@@ -318,11 +321,15 @@ public:
         }
         else
         {
-            // normal = interpolated_vertex - C.row(I[0]);
             normal[0] = interpolated_vertex[0] - C.row(0)[0];
             normal[1] = interpolated_vertex[1] - C.row(0)[1];
             normal[2] = interpolated_vertex[2] - C.row(0)[2];
         }
+        // normalization
+        auto normal_len = std::pow(std::pow(normal[0], 2) + std::pow(normal[1], 2) + std::pow(normal[2], 2), 0.5f);
+        normal[0] = normal[0] / normal_len;
+        normal[1] = normal[1] / normal_len;
+        normal[2] = normal[2] / normal_len;
 
         return normal;
     }
@@ -572,7 +579,7 @@ public:
         return std::make_pair(coors, signed_distance);
     }
 
-    void run()
+    void run(std::string file_name = "bunny.obj")
     {
         int nx = 5;
         int ny = 5;
@@ -609,9 +616,19 @@ public:
                 }
             }
         }
-        write_obj("./bunny.obj", this->convert(this->m_vertices), this->m_triangles);
-        auto polygons = convert_triangles_to_polygons(this->m_triangles);
-        feature_extraction(this->m_vertices, polygons);
+        write_obj(file_name, this->convert(this->m_vertices), this->m_triangles);
+        // calculate the number of feature points
+        // int feature_point_count = 0;
+        // for(auto m_vertice: this->m_vertices)
+        // {
+        //     if(m_vertice.is_feature_point)
+        //     {
+        //         feature_point_count++;
+        //     }
+        // }
+        // std::cout << "feature point count is: " << feature_point_count << std::endl;
+        // auto polygons = convert_triangles_to_polygons(this->m_triangles);
+        // feature_extraction(this->m_vertices, polygons);
     }
 
     std::vector<Eigen::Vector3d> convert(const std::vector<CustomizedPoint3D>& cstmzd_points)
@@ -629,7 +646,7 @@ public:
 TEST(GlobalTest, bunny)
 {
     init_tables();
-    print_mc33_table();
+    // print_mc33_table();
     Chaos chaos;
     chaos.init_source_mesh("D:\\Library\\libigl\\build\\_deps\\libigl_tutorial_tata-src\\bunny.off");
     auto start = std::chrono::high_resolution_clock::now();
@@ -639,4 +656,95 @@ TEST(GlobalTest, bunny)
     std::cout << "total cost seconds is " << duration.count() << "s" << std::endl;
     std::cout << "cache hitted count" << cache_hitted_count << std::endl;
     std::cout << "cache count" << FEATURE_MC33_CACHE.size() << std::endl;
+}
+
+TEST(GlobalTest, get_interpolated_vertex_normal_test)
+{
+    Chaos chaos;
+    chaos.init_source_mesh("D:\\PHD\\Projects\\paper_implementation\\model\\cube.obj");
+    double pos_normal_basic = 0.57735f;
+    double neg_normal_basic = -0.57735f;
+    double deviation = 0.000001f;
+    {
+        Eigen::Vector3d interpolated_vertex{
+            1.5f, 1.5f, 1.5f
+        };
+        auto normal = chaos.get_interpolated_vertex_normal(interpolated_vertex);
+        ASSERT_LT(std::abs(normal[0] - pos_normal_basic), deviation);
+        ASSERT_LT(std::abs(normal[1] - pos_normal_basic), deviation);
+        ASSERT_LT(std::abs(normal[2] - pos_normal_basic), deviation);
+        ASSERT_LT(std::abs(std::pow(normal[0], 2) + std::pow(normal[1], 2) + std::pow(normal[2], 2) - 1.0f), deviation);
+    }
+    {
+        Eigen::Vector3d interpolated_vertex{
+            -1.5f, -1.5f, -1.5f
+        };
+        auto normal = chaos.get_interpolated_vertex_normal(interpolated_vertex);
+        ASSERT_LT(std::abs(normal[0] - neg_normal_basic), deviation);
+        ASSERT_LT(std::abs(normal[1] - neg_normal_basic), deviation);
+        ASSERT_LT(std::abs(normal[2] - neg_normal_basic), deviation);
+        ASSERT_LT(std::abs(std::pow(normal[0], 2) + std::pow(normal[1], 2) + std::pow(normal[2], 2) - 1.0f), deviation);
+    }
+    {
+        Eigen::Vector3d interpolated_vertex{
+            -0.5f, 1.5f, 1.5f
+        };
+        auto normal = chaos.get_interpolated_vertex_normal(interpolated_vertex);
+        ASSERT_LT(std::abs(normal[0] - neg_normal_basic), deviation);
+        ASSERT_LT(std::abs(normal[1] - pos_normal_basic), deviation);
+        ASSERT_LT(std::abs(normal[2] - pos_normal_basic), deviation);
+        ASSERT_LT(std::abs(std::pow(normal[0], 2) + std::pow(normal[1], 2) + std::pow(normal[2], 2) - 1.0f), deviation);
+    }
+}
+
+TEST(GlobalTest, get_feature_vertex_test)
+{
+    init_tables();
+    Chaos chaos;
+    chaos.init_source_mesh("D:\\PHD\\Projects\\paper_implementation\\model\\cube.obj");
+    double deviation = 0.000001f;
+    std::vector<Eigen::Vector3d> coors{
+        {0.5f, 0.5f, 0.5f},
+        {0.5f, 1.5f, 0.5f},
+        {0.5f, 1.5f, 1.5f},
+        {0.5f, 0.5f, 1.5f},
+        {1.5f, 0.5f, 0.5f},
+        {1.5f, 1.5f, 0.5f},
+        {1.5f, 1.5f, 1.5f},
+        {1.5f, 0.5f, 1.5f}
+    };
+    std::vector<double> signed_distances{
+        -0.5f, 0.5f, 0.707106f, 0.5f,
+        0.5f, 0.707106f, 0.866025f, 0.707106f
+    };
+
+    std::vector<Eigen::Vector3i> triangles = {
+        {0, 1, 2},
+        {0, 2, 3},
+        {0, 4, 5},
+        {0, 5, 1},
+        {4, 6, 5},
+        {4, 7, 6},
+        {6, 7, 3},
+        {6, 3, 2},
+        {1, 5, 2},
+        {2, 5, 6},
+        {0, 3, 4},
+        {3, 7, 4}
+    };
+    std::tuple<unsigned int, unsigned int> feature_interpolation_rule = std::make_tuple(3, 0x038);
+    // auto feature_interpolation_rule = std::make_tuple(3, 0x038);
+    auto feature_vertex = chaos.get_feature_vertex(0, 0, 0, feature_interpolation_rule, coors, signed_distances, triangles);
+    std::cout << "feature vertex is: " << feature_vertex << std::endl;
+    ASSERT_LE(std::abs(feature_vertex[0] - 1.0f), deviation);
+    ASSERT_LE(std::abs(feature_vertex[1] - 1.0f), deviation);
+    ASSERT_LE(std::abs(feature_vertex[2] - 1.0f), deviation);
+}
+
+TEST(GlobalTest, feature_insertion_cube)
+{
+    init_tables();
+    Chaos chaos;
+    chaos.init_source_mesh("D:\\PHD\\Projects\\paper_implementation\\model\\cube.obj");
+    chaos.run("./feature_cube.obj");
 }

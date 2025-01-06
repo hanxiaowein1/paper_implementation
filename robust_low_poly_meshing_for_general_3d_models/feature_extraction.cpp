@@ -79,7 +79,15 @@ void feature_extraction(
         if(feature_point_connected_after_flip(half_edge))
         {
             // do edge flip that avoid inner interpolation
-            mesh->edge_flip_with_intersection_detect(half_edge);
+            bool flipped = mesh->edge_flip_with_intersection_detect(half_edge);
+            if(flipped)
+            {
+                std::cout << "flipped succeed" << std::endl;
+            }
+            else
+            {
+                std::cout << "flipped failed, inner intersection happened" << std::endl;
+            }
         }
     }
     // save it to obj file to check the result(just for test)

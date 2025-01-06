@@ -34,17 +34,45 @@ public:
         result.z = this->z - point.z;
         return result;
     }
+    CustomizedPoint3D operator+(const CustomizedPoint3D& point) const
+    {
+        CustomizedPoint3D result;
+        result.x = this->x + point.x;
+        result.y = this->y + point.y;
+        result.z = this->z + point.z;
+        return result;
+    }
+    CustomizedPoint3D operator*(double value) const
+    {
+        CustomizedPoint3D result;
+        result.x = this->x * value;
+        result.y = this->y * value;
+        result.z = this->z * value;
+        return result;
+    }
+    CustomizedPoint3D operator/(double value) const
+    {
+        if(value == 0.0f)
+        {
+            throw std::exception("value cannot be zero!");
+        }
+        CustomizedPoint3D result;
+        result.x = this->x / value;
+        result.y = this->y / value;
+        result.z = this-> z / value;
+        return result;
+    }
     bool between(const CustomizedPoint3D& point1, const CustomizedPoint3D& point2)
     {
-        if(!(charles_math::in_interval(this->x, point1.x, point2.x)))
+        if(!(charles_math::in_interval(this->x + charles_mesh::deviation, point1.x, point2.x) && charles_math::in_interval(this->x - charles_mesh::deviation, point1.x, point2.x)))
         {
             return false;
         }
-        if(!(charles_math::in_interval(this->y, point1.y, point2.y)))
+        if(!(charles_math::in_interval(this->y + charles_mesh::deviation, point1.y, point2.y) && charles_math::in_interval(this->y - charles_mesh::deviation, point1.y, point2.y)))
         {
             return false;
         }
-        if(!(charles_math::in_interval(this->z, point1.z, point2.z)))
+        if(!(charles_math::in_interval(this->z + charles_mesh::deviation, point1.z, point2.z) && charles_math::in_interval(this->z - charles_mesh::deviation, point1.z, point2.z)))
         {
             return false;
         }
@@ -67,5 +95,24 @@ public:
         return true;
     }
 };
+
+namespace std {
+    template<>
+    struct hash<CustomizedPoint3D> {
+        size_t operator()(const CustomizedPoint3D& point) const {
+            size_t x_hash = std::hash<double>()(point.x);
+            size_t y_hash = std::hash<double>()(point.y) << 1;
+            size_t z_hash = std::hash<double>()(point.z) << 2;
+            return x_hash ^ y_hash ^ z_hash;
+        }
+    };
+    template <> 
+    struct hash<std::pair<CustomizedPoint3D, CustomizedPoint3D>> {
+        inline size_t operator()(const std::pair<CustomizedPoint3D, CustomizedPoint3D>& v) const {
+            std::hash<CustomizedPoint3D> point_hasher;
+            return point_hasher(v.first) ^ point_hasher(v.second);
+        }
+    };
+}
 
 #endif
