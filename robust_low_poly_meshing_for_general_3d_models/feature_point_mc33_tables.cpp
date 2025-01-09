@@ -29,6 +29,7 @@
 */
 
 int FeatureMC33Table::feature_triangle_length = 2;
+int FeatureMC33Table::mc33_origin_triangle_length = 3;
 int FeatureMC33Table::mc33_triangle_length = 2;
 int FeatureMC33Table::common_triangle_length = 3;
 
@@ -735,6 +736,11 @@ FeatureMC33Table FeatureMC33Table::rotate(const Axis& axis, int times)
         auto new_triangles = ::rotate_edge_in_axis(triangles, axis, times, 2);
         feature_mc33_tables.fp_connected_edges.emplace(index, new_triangles);
     }
+    for(auto [index, triangles]: this->mc33_origin_triangles)
+    {
+        auto new_triangles = ::rotate_edge_in_axis(triangles, axis, times, 3);
+        feature_mc33_tables.mc33_origin_triangles.emplace(index, new_triangles);
+    }
     auto new_mc33_triangles = ::rotate_edge_in_axis(this->mc33_triangles, axis, times, 2);
     //feature_mc33_tables.mc33_triangles.emplace_back(new_mc33_triangles);
     feature_mc33_tables.mc33_triangles.insert(feature_mc33_tables.mc33_triangles.end(), new_mc33_triangles.begin(), new_mc33_triangles.end());
@@ -748,43 +754,43 @@ const std::unordered_map<Face, std::vector<Eigen::Vector3i>> FACE_TRIANGLES = {
     {
         Face::f0,
         {
-            {0, 1, 5},
-            {0, 4, 5},
+            {0, 1, 4},
+            {1, 5, 4},
         }
     },
     {
         Face::f1,
         {
             {1, 2, 6},
-            {1, 5, 6},
+            {1, 6, 5},
         }
     },
     {
         Face::f2,
         {
             {2, 3, 6},
-            {3, 6, 7}
+            {3, 7, 6}
         }
     },
     {
         Face::f3,
         {
-            {0, 3, 7},
-            {0, 7, 4}
+            {0, 4, 3},
+            {3, 4, 7}
         }
     },
     {
         Face::f4,
         {
-            {1, 2, 3},
-            {0, 1, 3}
+            {1, 3, 2},
+            {0, 3, 1}
         }
     },
     {
         Face::f5,
         {
-            {5, 6, 7},
-            {4, 5, 7}
+            {5, 6, 4},
+            {4, 6, 7}
         }
     }
 };
@@ -830,7 +836,18 @@ std::unordered_map<
                 {},
                 // FeatureMC33Table
                 {
-                    {}, {}, {}, {}, {}
+                    // feature interpolation rules
+                    {},
+                    // feature triangles
+                    {},
+                    // mc33 origin triangles
+                    {},
+                    // mc33 triangles(internal interpolation point)
+                    {},
+                    // common triangles
+                    {},
+                    // feature point contrains
+                    {}
                 }
             }
         }
@@ -852,6 +869,10 @@ std::unordered_map<
                     // feature triangles
                     {
                         {0, {0x38, 0x03, 0x80}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x038}}
                     },
                     // mc33 triangles
                     {},
@@ -885,6 +906,10 @@ std::unordered_map<
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x38, 0x89, 0x91, 0x13}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x138, 0x189}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -920,6 +945,11 @@ std::unordered_map<
                     {
                         {0, {0x74, 0x87, 0x48}},
                         {1, {0x56, 0x6A, 0xA5}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x487}},
+                        {1, {0x56A}}
                     },
                     // mc33 triangles
                     {},
@@ -968,6 +998,10 @@ std::unordered_map<
                     {
                         {0, {0x87, 0x48, 0x54, 0xA5, 0x6A, 0x76}}
                     },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x876, 0x86A, 0x8A5, 0x854}}
+                    },
                     // mc33 triangles
                     {},
                     // common triangles
@@ -1002,6 +1036,11 @@ std::unordered_map<
                     {
                         {0, {0x21, 0xA2, 0x1A}},
                         {1, {0x48, 0x87, 0x74}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x1A2}},
+                        {1, {0x487}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1048,6 +1087,8 @@ std::unordered_map<
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
+                    // mc33 origin triangles
+                    {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
                     // common triangles(std::vector<unsigned int>)
@@ -1075,6 +1116,10 @@ std::unordered_map<
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x13, 0x38, 0x84, 0x45, 0x51}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x351, 0x385, 0x845}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1110,6 +1155,11 @@ std::unordered_map<
                     {
                         {0, {0x98, 0x59, 0x75, 0x87}},
                         {1, {0x21, 0xA2, 0x1A}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x758, 0x859}},
+                        {1, {0x1A2}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1156,6 +1206,8 @@ std::unordered_map<
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
+                    // mc33 origin triangles
+                    {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
                     // common triangles(std::vector<unsigned int>)
@@ -1175,6 +1227,10 @@ std::unordered_map<
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x21, 0x19, 0x98, 0x87, 0x72}},
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x981, 0x182, 0x287, 0x27A, 0xA75}},
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1211,6 +1267,12 @@ std::unordered_map<
                         {0, {0x21, 0xA2, 0x1A}},
                         {1, {0x67, 0x7B, 0xB6}},
                         {2, {0x45, 0x59, 0x94}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x1A2}},
+                        {1, {0x67B}},
+                        {2, {0x459}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1267,6 +1329,11 @@ std::unordered_map<
                         {0, {0xB7, 0x76, 0x6A, 0xA1, 0x12, 0x2B}},
                         {1, {0x45, 0x59, 0x94}}
                     },
+                    // mc33 origin triangles
+                    {
+                        {0, {0xB27, 0x721, 0x716, 0x61A}},
+                        {1, {0x459}}
+                    },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
                     // common triangles(std::vector<unsigned int>)
@@ -1310,6 +1377,8 @@ std::unordered_map<
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
+                    // mc33 origin triangles
+                    {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {0x7B, 0xB2, 0x21, 0x19, 0x94, 0x45, 0x5A, 0xA6, 0x67},
                     // common triangles(std::vector<unsigned int>)
@@ -1330,6 +1399,11 @@ std::unordered_map<
                     {
                         {0, {0x65, 0xA6, 0x5A}},
                         {1, {0xB2, 0x7B, 0x47, 0x94, 0x19, 0x21}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x5A6}},
+                        {1, {0x47B, 0x419, 0x21B, 0xB14}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1374,6 +1448,8 @@ std::unordered_map<
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
+                    // mc33 origin triangles
+                    {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
                     // common triangles(std::vector<unsigned int>)
@@ -1401,6 +1477,10 @@ std::unordered_map<
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x51, 0x75, 0x37, 0x13}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x137, 0x175}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1434,6 +1514,10 @@ std::unordered_map<
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0xB7, 0x74, 0x49, 0x91, 0x12, 0x2B}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x2B7, 0x274, 0x241, 0x149}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1469,6 +1553,11 @@ std::unordered_map<
                     {
                         {0, {0xB6, 0x64, 0x48, 0x8B}},
                         {1, {0xA2, 0x9A, 0x09, 0x20}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x68B, 0x648}},
+                        {1, {0x20A, 0x09A}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1511,6 +1600,8 @@ std::unordered_map<
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
+                    // mc33 origin triangles
+                    {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
                     // common triangles(std::vector<unsigned int>)
@@ -1528,6 +1619,8 @@ std::unordered_map<
                     // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
+                    {},
+                    // mc33 origin triangles
                     {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {0xA2, 0x9A, 0x49, 0x64, 0xB6, 0x8B, 0x08},
@@ -1556,6 +1649,10 @@ std::unordered_map<
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x23, 0x37, 0x74, 0x49, 0x9A, 0xA2}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x23A, 0xA34, 0x374, 0xA49}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1591,6 +1688,11 @@ std::unordered_map<
                     {
                         {0, {0x67, 0x7B, 0xB6}},
                         {1, {0x13, 0x38, 0x84, 0x45, 0x51}},
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x67B}},
+                        {1, {0x351, 0x385, 0x845}},
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1635,6 +1737,8 @@ std::unordered_map<
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
+                    // mc33 origin triangles
+                    {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
                     // common triangles(std::vector<unsigned int>)
@@ -1653,6 +1757,8 @@ std::unordered_map<
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
+                    // mc33 origin triangles
+                    {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {0x51, 0x13, 0x38, 0x84, 0x47, 0x7B, 0xB6, 0x65},
                     // common triangles(std::vector<unsigned int>)
@@ -1670,6 +1776,8 @@ std::unordered_map<
                     // feature interpolation rules(std::vector<std::tuple<unsigned int, unsigned int>>)
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
+                    {},
+                    // mc33 origin triangles
                     {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {0x84, 0x45, 0x51, 0x13, 0x3B, 0xB6, 0x67, 0x78},
@@ -1702,6 +1810,13 @@ std::unordered_map<
                         {1, {0x56, 0x6A, 0xA5}},
                         {2, {0x48, 0x87, 0x74}},
                         {3, {0x10, 0x91, 0x09}},
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x2B3}},
+                        {1, {0x56A}},
+                        {2, {0x487}},
+                        {3, {0x019}},
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1770,6 +1885,12 @@ std::unordered_map<
                         {1, {0x48, 0x87, 0x74}},
                         {2, {0x10, 0x91, 0x09}},
                     },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x2A5, 0x253, 0x35B, 0xB56}},
+                        {1, {0x487}},
+                        {2, {0x091}},
+                    },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
                     // common triangles(std::vector<unsigned int>)
@@ -1822,6 +1943,10 @@ std::unordered_map<
                     {
                         {0, {0x10, 0x91, 0x09}},
                     },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x091}},
+                    },
                     // mc33 triangles(std::vector<unsigned int>)
                     {0xA5, 0x2A, 0x32, 0x83, 0x48, 0x74, 0xB7, 0x6B, 0x56},
                     // common triangles(std::vector<unsigned int>)
@@ -1850,6 +1975,8 @@ std::unordered_map<
                     {},
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {},
+                    // mc33 origin triangles
+                    {},
                     // mc33 triangles(std::vector<unsigned int>)
                     {0x30, 0x83, 0x48, 0x74, 0xB7, 0x6B, 0x56, 0xA5, 0x2A, 0x12, 0x91, 0x09},
                     // common triangles(std::vector<unsigned int>)
@@ -1871,6 +1998,12 @@ std::unordered_map<
                         {0, {0x12, 0x2A, 0xA1}},
                         {1, {0x48, 0x87, 0x74}},
                         {2, {0x3B, 0xB6, 0x65, 0x59, 0x90, 0x03}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x12A}},
+                        {1, {0x487}},
+                        {2, {0xB36, 0x306, 0x605, 0x095}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
@@ -1926,6 +2059,10 @@ std::unordered_map<
                     {
                         {0, {0x12, 0x2A, 0xA1}},
                     },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x12A}},
+                    },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},
                     // common triangles(std::vector<unsigned int>)
@@ -1963,6 +2100,10 @@ std::unordered_map<
                     // feature triangles(std::unordered_map<unsigned int, std::vector<unsigned int>>)
                     {
                         {0, {0x2B, 0xB8, 0x84, 0x45, 0x51, 0x12}}
+                    },
+                    // mc33 origin triangles
+                    {
+                        {0, {0x4B8, 0x41B, 0x451, 0xB12}}
                     },
                     // mc33 triangles(std::vector<unsigned int>)
                     {},

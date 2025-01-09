@@ -20,6 +20,8 @@ public:
     std::vector<std::tuple<unsigned int, unsigned int>> feature_interpolation_rules;
     // example: {{0, {0x38, 0x37}}}, represents feature point index 0 (0x038) + two point on edge, makes a triangle
     std::unordered_map<unsigned int, std::vector<unsigned int>> fp_connected_edges;
+    // if feature point equations has no solution, then use mc33 origin triangles(this is usually common triangles)
+    std::unordered_map<unsigned int, std::vector<unsigned int>> mc33_origin_triangles;
     // with mc33 inserted point triangles, such as{0x38}
     std::vector<unsigned int> mc33_triangles;
     // example: {0x038}, represents normal triangles
@@ -45,6 +47,7 @@ public:
      */
     std::unordered_map<unsigned int, std::vector<Eigen::Vector3i>> constrains;
     static int feature_triangle_length;
+    static int mc33_origin_triangle_length;
     static int mc33_triangle_length;
     static int common_triangle_length;
 
@@ -96,6 +99,16 @@ public:
             for(const auto& feature_edge: value)
             {
                 os << std::format("{:#x}, ", feature_edge);
+            }
+        }
+        os << "}, mc33 origin triangles: {";
+        for(const auto& [key, value]: m.mc33_origin_triangles)
+        {
+            os << std::format("feature index: {}, ", key);
+            os << "mc33 origin edge: {";
+            for(const auto& mc33_origin_edge: value)
+            {
+                os << std::format("{:#x}, ", mc33_origin_edge);
             }
         }
         os << "}, mc33 triangles: {";
